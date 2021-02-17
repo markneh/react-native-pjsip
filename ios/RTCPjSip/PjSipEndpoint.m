@@ -78,6 +78,7 @@
         pjsua_logging_config log_cfg;
         pjsua_logging_config_default(&log_cfg);
         log_cfg.console_level = 10;
+        log_cfg.cb = &onLog;
 
         // Init media config
         pjsua_media_config mediaConfig;
@@ -360,6 +361,10 @@
     [self emmitEvent:@"pjSipMessageReceived" body:[message toJsonDictionary]];
 }
 
+-(void)emmitLogMessage:(NSString *)message {
+    [self emmitEvent:@"pjSipLogReceived" body:message];
+}
+
 -(void)emmitEvent:(NSString*) name body:(id)body {
     [[self.bridge eventDispatcher] sendAppEventWithName:name body:body];
 }
@@ -465,6 +470,15 @@ static void onMessageReceived(pjsua_call_id call_id, const pj_str_t *from,
     PjSipMessage* message = [PjSipMessage itemConfig:data];
     
     [endpoint emmitMessageReceived:message];
+}
+
+static void onLog(int level, const char *data, int len) {
+    NSString *message = [NSString stringWithCString:data encoding:NSUTF8StringEncoding];
+    if (message && message.length > 0) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [[PjSipEndpoint instance] emmitLogMessage:message];
+        });
+    }
 }
 
 @end

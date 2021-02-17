@@ -59,6 +59,7 @@ export default class Endpoint extends EventEmitter {
         DeviceEventEmitter.addListener('pjSipCallScreenLocked', this._onCallScreenLocked.bind(this));
         DeviceEventEmitter.addListener('pjSipMessageReceived', this._onMessageReceived.bind(this));
         DeviceEventEmitter.addListener('pjSipConnectivityChanged', this._onConnectivityChanged.bind(this));
+        DeviceEventEmitter.addListener('pjSipLogReceived', this._onLogReceived.bind(this));
     }
 
     /**
@@ -648,6 +649,10 @@ export default class Endpoint extends EventEmitter {
          * @property {Message} message
          */
         this.emit("message_received", new Message(data));
+    }
+
+    _onLogReceived(data) {
+      this.emit("log_received", data);
     }
 
     /**
