@@ -77,7 +77,7 @@
         // Init the logging config structure
         pjsua_logging_config log_cfg;
         pjsua_logging_config_default(&log_cfg);
-        log_cfg.console_level = 10;
+        log_cfg.console_level = 4;
         log_cfg.cb = &onLog;
 
         // Init media config
