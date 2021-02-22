@@ -17,6 +17,7 @@
 @property bool isSpeaker;
 
 +(instancetype)instance;
++(instancetype)instanceWithConfig:(NSDictionary *)config;
 
 -(NSDictionary *)start: (NSDictionary *) config;
 

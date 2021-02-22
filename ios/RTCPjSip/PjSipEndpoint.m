@@ -13,16 +13,20 @@
 @implementation PjSipEndpoint
 
 + (instancetype) instance {
+    return [self instanceWithConfig:nil];
+}
+
++ (instancetype) instanceWithConfig:(NSDictionary *)config {
     static PjSipEndpoint *sharedInstance = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        sharedInstance = [[PjSipEndpoint alloc] init];
+        sharedInstance = [[PjSipEndpoint alloc] initWithConfig:config];
     });
 
     return sharedInstance;
 }
 
-- (instancetype) init {
+- (instancetype) initWithConfig:(NSDictionary *)config {
     self = [super init];
     self.accounts = [[NSMutableDictionary alloc] initWithCapacity:12];
     self.calls = [[NSMutableDictionary alloc] initWithCapacity:12];
@@ -49,6 +53,12 @@
         cfg.cb.on_call_media_event = &onCallMediaEvent;
         
         cfg.cb.on_pager2 = &onMessageReceived;
+
+        NSString *ua = config[@"service"][@"ua"];
+        if (ua && ua.length > 0) {
+            char *uaAsCstring = (char *)[ua cStringUsingEncoding:NSUTF8StringEncoding];
+            cfg.user_agent =  pj_str(uaAsCstring);
+        }
         
         // on_call_video_state
         

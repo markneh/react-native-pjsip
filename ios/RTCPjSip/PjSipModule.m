@@ -30,7 +30,7 @@
 }
 
 RCT_EXPORT_METHOD(start: (NSDictionary *) config callback: (RCTResponseSenderBlock) callback) {
-    [PjSipEndpoint instance].bridge = self.bridge;
+    [PjSipEndpoint instanceWithConfig:config].bridge = self.bridge;
 
     NSDictionary *result = [[PjSipEndpoint instance] start: config];
     callback(@[@TRUE, result]);
