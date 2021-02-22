@@ -546,6 +546,14 @@ export default class Endpoint extends EventEmitter {
         });
     }
 
+    getCodecs() {
+        return new Promise((resolve) => {
+            NativeModules.PjSipModule.getCodecs(codecs => {
+                resolve(codecs);
+            });
+        })
+    }
+
     /**
      * @fires Endpoint#connectivity_changed
      * @private

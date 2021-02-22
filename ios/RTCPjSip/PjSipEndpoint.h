@@ -33,6 +33,7 @@
 
 -(void)changeOrientation: (NSString*) orientation;
 -(void)changeCodecSettings: (NSDictionary*) codecSettings;
+-(NSDictionary *)getCodecs;
 
 -(void)emmitRegistrationChanged:(PjSipAccount*) account;
 -(void)emmitCallReceived:(PjSipCall*) call;

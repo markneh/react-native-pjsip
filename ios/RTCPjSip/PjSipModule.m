@@ -257,6 +257,11 @@ RCT_EXPORT_METHOD(changeCodecSettings: (NSDictionary*) codecSettings callback:(R
     callback(@[@TRUE]);
 }
 
+RCT_EXPORT_METHOD(getCodecs: (RCTResponseSenderBlock)callback) {
+    NSDictionary *codecs = [[PjSipEndpoint instance] getCodecs];
+    callback(@[codecs]);
+}
+
 RCT_EXPORT_MODULE();
 
 @end
