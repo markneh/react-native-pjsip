@@ -250,15 +250,24 @@
         [NSException raise:@"Failed to make a call" format:@"See device logs for more details."];
     }
     pj_pool_release(pool);
-    
-    PjSipCall *call = [PjSipCall itemConfig:callId];
-    self.calls[@(callId)] = call;
-    
+
+    PjSipCall *call = [self createCallIfNeeded:callId];
+
     return call;
 }
 
 - (PjSipCall *) findCall: (int) callId {
     return self.calls[@(callId)];
+}
+
+- (PjSipCall *)createCallIfNeeded: (int) callId {
+    PjSipCall *call = self.calls[@(callId)];
+    if (!call) {
+        call = [PjSipCall itemConfig:callId];
+        self.calls[@(callId)] = call;
+    }
+
+    return call;
 }
 
 -(void) pauseParallelCalls:(PjSipCall*) call {
@@ -408,7 +417,9 @@ static void onCallStateChanged(pjsua_call_id callId, pjsip_event *event) {
     
     PjSipCall* call = [endpoint findCall:callId];
     
-    if (!call) {
+    if (!call && callInfo.state == PJSIP_INV_STATE_CALLING) {
+        call = [endpoint createCallIfNeeded:callId];
+    } else if (!call) {
         return;
     }
     
