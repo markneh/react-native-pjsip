@@ -7,7 +7,7 @@
     if (pjStr->slen < 0) {
         return [NSNull null];
     }
-    
+
     return [[NSString alloc]
             initWithBytes:pjStr->ptr
                    length:pjStr->slen
@@ -215,7 +215,9 @@
 
 +(void) fillCallSettings: (pjsua_call_setting*) callSettings dict:(NSDictionary*) dict {
     pjsua_call_setting_default(callSettings);
-    
+
+    callSettings->vid_cnt = 0; // disable video by default
+
     if (dict != NULL) {
         if (dict[@"audioCount"] != nil) {
             callSettings->aud_cnt = [dict[@"audioCount"] intValue];
@@ -233,7 +235,7 @@
 }
 
 +(void) fillMsgData: (pjsua_msg_data*) msgData dict:(NSDictionary*) dict pool:(pj_pool_t*) pool{
-    
+
     if (dict != NULL) {
         if (dict[@"targetURI"] != nil) {
             msgData->target_uri = pj_str((char *) [dict[@"targetURI"] UTF8String]);
@@ -248,11 +250,11 @@
             msgData->msg_body = pj_str((char *) [dict[@"body"] UTF8String]);
         }
     }
-    
+
 }
 
 +(void) fillHdrList: (pjsip_hdr* ) hdrList dict:(NSDictionary*) dict pool:(pj_pool_t*) pool {
-    
+
     for(NSString *key in [dict allKeys]){
         pj_str_t hname = pj_str((char *)[key UTF8String]);
         char * headerValue = (char *)[(NSString *)[dict objectForKey:key] UTF8String];
@@ -260,7 +262,7 @@
         pjsip_generic_string_hdr* add_hdr = pjsip_generic_string_hdr_create(pool, &hname, &hvalue);
         pj_list_push_back(hdrList, add_hdr);
     }
-    
+
 }
 
 @end
