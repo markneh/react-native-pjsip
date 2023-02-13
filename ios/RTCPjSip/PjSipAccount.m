@@ -139,6 +139,29 @@
     return self;
 }
 
+- (BOOL)updateCredentials:(NSDictionary *)credentials {
+    NSString *username = credentials[@"username"];
+    NSString *password = credentials[@"password"];
+    
+    if (!username || !password) {
+        return false;
+    }
+    
+    pj_pool_t *tmp_pool = pjsua_pool_create("tmp-pjsua", 1000, 1000);
+    pjsua_acc_config config;
+    pjsua_acc_get_config(self.id, tmp_pool, &config);
+    
+    pjsip_cred_info cred = config.cred_info[0];
+    cred.username = pj_str((char *) [self.username UTF8String]);
+    cred.data = pj_str((char *) [self.password UTF8String]);
+    cred.data_type = PJSIP_CRED_DATA_PLAIN_PASSWD;
+    
+    pj_status_t status = pjsua_acc_modify(self.id, &config);
+    pj_pool_release(tmp_pool);
+    
+    return status == PJ_SUCCESS;
+}
+
 - (void) dealloc {
     pjsua_acc_set_registration(self.id, PJ_FALSE);
     pjsua_acc_del(self.id);

@@ -32,4 +32,6 @@
 
 - (NSDictionary *)toJsonDictionary;
 
+- (BOOL)updateCredentials:(NSDictionary *)credentials;
+
 @end

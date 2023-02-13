@@ -48,6 +48,24 @@ RCT_EXPORT_METHOD(createAccount: (NSDictionary *) config callback:(RCTResponseSe
     callback(@[@TRUE, [account toJsonDictionary]]);
 }
 
+RCT_EXPORT_METHOD(updateAccount: (int)accountId
+                  withCredentials: (NSDictionary *)credentials
+                  callback:(RCTResponseSenderBlock) callback) {
+    @try {
+        PjSipEndpoint *endpoint = [PjSipEndpoint instance];
+        PjSipAccount *account = [endpoint findAccount:accountId];
+
+        if (!account) {
+            callback(@[@FALSE, @"User was not found"]);
+        } else {
+            BOOL result = [account updateCredentials:credentials];
+            callback(@[@(result)]);
+        }
+    } @catch (NSException *exception) {
+        callback(@[@FALSE, @"User was not found"]);
+    }
+}
+
 RCT_EXPORT_METHOD(deleteAccount: (int) accountId callback:(RCTResponseSenderBlock) callback) {
     [[PjSipEndpoint instance] deleteAccount:accountId];
     callback(@[@TRUE]);

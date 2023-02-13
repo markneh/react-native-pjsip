@@ -188,6 +188,18 @@ export default class Endpoint extends EventEmitter {
         throw new Error("Not implemented");
     }
 
+    updateAccountCredentials(account, credentials) {
+        return new Promise((resolve, reject) => {
+            NativeModules.PjSipModule.updateAccount(account.getId(), credentials, (successful) => {
+                if (successful) {
+                    resolve();
+                } else {
+                    reject();
+                }
+            })
+        })
+    }
+
     /**
      * Update registration or perform unregistration.
      * If registration is configured for this account, then initial SIP REGISTER will be sent when the account is added.
