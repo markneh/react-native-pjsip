@@ -75,9 +75,9 @@ RCT_EXPORT_METHOD(registerAccount: (int) accountId renew:(BOOL) renew callback:(
     @try {
         PjSipEndpoint* endpoint = [PjSipEndpoint instance];
         PjSipAccount *account = [endpoint findAccount:accountId];
-        
+
         [account register:renew];
-        
+
         callback(@[@TRUE]);
     }
     @catch (NSException * e) {
@@ -92,11 +92,11 @@ RCT_EXPORT_METHOD(makeCall: (int) accountId destination: (NSString *) destinatio
         PjSipEndpoint* endpoint = [PjSipEndpoint instance];
         PjSipAccount *account = [endpoint findAccount:accountId];
         PjSipCall *call = [endpoint makeCall:account destination:destination callSettings:callSettings msgData:msgData];
-        
+
         // TODO: Remove this function
         // Automatically put other calls on hold.
         [endpoint pauseParallelCalls:call];
-        
+
         callback(@[@TRUE, [call toJsonDictionary:endpoint.isSpeaker]]);
     }
     @catch (NSException * e) {
@@ -106,7 +106,7 @@ RCT_EXPORT_METHOD(makeCall: (int) accountId destination: (NSString *) destinatio
 
 RCT_EXPORT_METHOD(hangupCall: (int) callId callback:(RCTResponseSenderBlock) callback) {
     PjSipCall *call = [[PjSipEndpoint instance] findCall:callId];
-    
+
     if (call) {
         [call hangup];
         callback(@[@TRUE]);
@@ -117,7 +117,7 @@ RCT_EXPORT_METHOD(hangupCall: (int) callId callback:(RCTResponseSenderBlock) cal
 
 RCT_EXPORT_METHOD(declineCall: (int) callId callback:(RCTResponseSenderBlock) callback) {
     PjSipCall *call = [[PjSipEndpoint instance] findCall:callId];
-    
+
     if (call) {
         [call decline];
         callback(@[@TRUE]);
@@ -129,13 +129,13 @@ RCT_EXPORT_METHOD(declineCall: (int) callId callback:(RCTResponseSenderBlock) ca
 RCT_EXPORT_METHOD(answerCall: (int) callId callback:(RCTResponseSenderBlock) callback) {
     PjSipEndpoint* endpoint = [PjSipEndpoint instance];
     PjSipCall *call = [endpoint findCall:callId];
-    
+
     if (call) {
         [call answer];
-        
+
         // Automatically put other calls on hold.
         [endpoint pauseParallelCalls:call];
-        
+
         callback(@[@TRUE]);
     } else {
         callback(@[@FALSE, @"Call not found"]);
@@ -145,11 +145,11 @@ RCT_EXPORT_METHOD(answerCall: (int) callId callback:(RCTResponseSenderBlock) cal
 RCT_EXPORT_METHOD(holdCall: (int) callId callback:(RCTResponseSenderBlock) callback) {
     PjSipEndpoint* endpoint = [PjSipEndpoint instance];
     PjSipCall *call = [endpoint findCall:callId];
-    
+
     if (call) {
         [call hold];
         [endpoint emmitCallChanged:call];
-        
+
         callback(@[@TRUE]);
     } else {
         callback(@[@FALSE, @"Call not found"]);
@@ -159,14 +159,14 @@ RCT_EXPORT_METHOD(holdCall: (int) callId callback:(RCTResponseSenderBlock) callb
 RCT_EXPORT_METHOD(unholdCall: (int) callId callback:(RCTResponseSenderBlock) callback) {
     PjSipEndpoint* endpoint = [PjSipEndpoint instance];
     PjSipCall *call = [endpoint findCall:callId];
-    
+
     if (call) {
         [call unhold];
         [endpoint emmitCallChanged:call];
-        
+
         // Automatically put other calls on hold.
         [endpoint pauseParallelCalls:call];
-        
+
         callback(@[@TRUE]);
     } else {
         callback(@[@FALSE, @"Call not found"]);
@@ -176,7 +176,7 @@ RCT_EXPORT_METHOD(unholdCall: (int) callId callback:(RCTResponseSenderBlock) cal
 RCT_EXPORT_METHOD(muteCall: (int) callId callback:(RCTResponseSenderBlock) callback) {
     PjSipEndpoint* endpoint = [PjSipEndpoint instance];
     PjSipCall *call = [endpoint findCall:callId];
-    
+
     if (call) {
         [call mute];
         [endpoint emmitCallChanged:call];
@@ -189,7 +189,7 @@ RCT_EXPORT_METHOD(muteCall: (int) callId callback:(RCTResponseSenderBlock) callb
 RCT_EXPORT_METHOD(unMuteCall: (int) callId callback:(RCTResponseSenderBlock) callback) {
     PjSipEndpoint* endpoint = [PjSipEndpoint instance];
     PjSipCall *call = [endpoint findCall:callId];
-    
+
     if (call) {
         [call unmute];
         [endpoint emmitCallChanged:call];
@@ -201,7 +201,7 @@ RCT_EXPORT_METHOD(unMuteCall: (int) callId callback:(RCTResponseSenderBlock) cal
 
 RCT_EXPORT_METHOD(xferCall: (int) callId destination: (NSString *) destination callback:(RCTResponseSenderBlock) callback) {
     PjSipCall *call = [[PjSipEndpoint instance] findCall:callId];
-    
+
     if (call) {
         [call xfer:destination];
         callback(@[@TRUE]);
@@ -212,7 +212,7 @@ RCT_EXPORT_METHOD(xferCall: (int) callId destination: (NSString *) destination c
 
 RCT_EXPORT_METHOD(xferReplacesCall: (int) callId destinationCallId: (int) destinationCallId callback:(RCTResponseSenderBlock) callback) {
     PjSipCall *call = [[PjSipEndpoint instance] findCall:callId];
-    
+
     if (call) {
         [call xferReplaces:destinationCallId];
         callback(@[@TRUE]);
@@ -223,7 +223,7 @@ RCT_EXPORT_METHOD(xferReplacesCall: (int) callId destinationCallId: (int) destin
 
 RCT_EXPORT_METHOD(redirectCall: (int) callId destination: (NSString *) destination callback:(RCTResponseSenderBlock) callback) {
     PjSipCall *call = [[PjSipEndpoint instance] findCall:callId];
-    
+
     if (call) {
         [call redirect:destination];
         callback(@[@TRUE]);
@@ -234,7 +234,7 @@ RCT_EXPORT_METHOD(redirectCall: (int) callId destination: (NSString *) destinati
 
 RCT_EXPORT_METHOD(dtmfCall: (int) callId digits: (NSString *) digits callback:(RCTResponseSenderBlock) callback) {
     PjSipCall *call = [[PjSipEndpoint instance] findCall:callId];
-    
+
     if (call) {
         [call dtmf:digits];
         callback(@[@TRUE]);
