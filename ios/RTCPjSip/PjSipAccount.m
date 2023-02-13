@@ -37,10 +37,15 @@
         pjsua_acc_config cfg;
         pjsua_acc_config_default(&cfg);
         
-        cfg.vid_in_auto_show = PJ_TRUE;
-        cfg.vid_out_auto_transmit = PJ_TRUE;
+        cfg.vid_in_auto_show = PJ_FALSE;
+        cfg.vid_out_auto_transmit = PJ_FALSE;
         cfg.ka_interval = 120;
-        cfg.use_rfc5626 = false;
+        cfg.use_rfc5626 = PJ_TRUE;
+        cfg.allow_sdp_nat_rewrite = PJ_TRUE;
+        cfg.sip_stun_use = PJSUA_STUN_RETRY_ON_FAILURE;
+        cfg.media_stun_use = PJSUA_STUN_USE_DEFAULT;
+//        cfg.reg_retry_interval = 100000;
+//        cfg.reg_first_retry_interval = 100000;
         
         // General settings
         {
@@ -60,8 +65,10 @@
             cred.scheme = pj_str("digest");
             cred.realm = ![PjSipUtil isEmptyString:self.regServer] ? pj_str((char *) [self.regServer UTF8String]) : pj_str("*");
             cred.username = pj_str((char *) [self.username UTF8String]);
-            cred.data = pj_str((char *) [self.password UTF8String]);
-            cred.data_type = PJSIP_CRED_DATA_PLAIN_PASSWD;
+            if (self.password.length) {
+                cred.data = pj_str((char *) [self.password UTF8String]);
+                cred.data_type = PJSIP_CRED_DATA_PLAIN_PASSWD;
+            }
 
             cfg.cred_count = 1;
             cfg.cred_info[0] = cred;
