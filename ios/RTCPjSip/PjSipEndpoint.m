@@ -28,6 +28,10 @@
 
 - (instancetype) initWithConfig:(NSDictionary *)config {
     self = [super init];
+    return self;
+}
+
+- (BOOL)startWithConfig:(NSDictionary *)config {
     self.accounts = [[NSMutableDictionary alloc] initWithCapacity:12];
     self.calls = [[NSMutableDictionary alloc] initWithCapacity:12];
 
@@ -37,6 +41,7 @@
     status = pjsua_create();
     if (status != PJ_SUCCESS) {
         NSLog(@"Error in pjsua_create()");
+        return false;
     }
 
     // Init pjsua
@@ -60,30 +65,7 @@
             char *uaAsCstring = (char *)[ua cStringUsingEncoding:NSUTF8StringEncoding];
             cfg.user_agent =  pj_str(uaAsCstring);
         }
-        
-        // on_call_video_state
-        
-//        cfg.cfg.cb.on_call_media_state = &on_call_media_state;
-//        cfg.cfg.cb.on_incoming_call = &on_incoming_call;
-//        cfg.cfg.cb.on_call_tsx_state = &on_call_tsx_state;
-//        cfg.cfg.cb.on_dtmf_digit = &call_on_dtmf_callback;
-//        cfg.cfg.cb.on_call_redirected = &call_on_redirected;
-//        cfg.cfg.cb.on_reg_state = &on_reg_state;
-//        cfg.cfg.cb.on_incoming_subscribe = &on_incoming_subscribe;
-//        cfg.cfg.cb.on_buddy_state = &on_buddy_state;
-//        cfg.cfg.cb.on_buddy_evsub_state = &on_buddy_evsub_state;
-//        cfg.cfg.cb.on_pager = &on_pager;
-//        cfg.cfg.cb.on_typing = &on_typing;
-//        cfg.cfg.cb.on_call_transfer_status = &on_call_transfer_status;
-//        cfg.cfg.cb.on_call_replaced = &on_call_replaced;
-//        cfg.cfg.cb.on_nat_detect = &on_nat_detect;
-//        cfg.cfg.cb.on_mwi_info = &on_mwi_info;
-//        cfg.cfg.cb.on_transport_state = &on_transport_state;
-//        cfg.cfg.cb.on_ice_transport_error = &on_ice_transport_error;
-//        cfg.cfg.cb.on_snd_dev_operation = &on_snd_dev_operation;
-//        cfg.cfg.cb.on_call_media_event = &on_call_media_event;
-        
-        // pjsua_vid_enum_wins(<#pjsua_vid_win_id *wids#>, <#unsigned int *count#>)
+
 
         // Init the logging config structure
         pjsua_logging_config log_cfg;
@@ -101,6 +83,7 @@
         status = pjsua_init(&cfg, &log_cfg, &mediaConfig);
         if (status != PJ_SUCCESS) {
             NSLog(@"Error in pjsua_init()");
+            return FALSE;
         }
     }
 
@@ -120,45 +103,48 @@
             self.udpTransportId = id;
         }
     }
-    
-    // Add TCP transport.
-    {
-        pjsua_transport_config cfg;
-        pjsua_transport_config_default(&cfg);
-        pjsua_transport_id id;
-        
-        status = pjsua_transport_create(PJSIP_TRANSPORT_TCP, &cfg, &id);
-        
-        if (status != PJ_SUCCESS) {
-            NSLog(@"Error creating TCP transport");
-        } else {
-            self.tcpTransportId = id;
-        }
-    }
-    
-    // Add TLS transport.
-    {
-        pjsua_transport_config cfg;
-        pjsua_transport_config_default(&cfg);
-        pjsua_transport_id id;
-        
-        status = pjsua_transport_create(PJSIP_TRANSPORT_TLS, &cfg, &id);
-        
-        if (status != PJ_SUCCESS) {
-            NSLog(@"Error creating TLS transport");
-        } else {
-            self.tlsTransportId = id;
-        }
-    }
-    
+
+//    // Add TCP transport.
+//    {
+//        pjsua_transport_config cfg;
+//        pjsua_transport_config_default(&cfg);
+//        pjsua_transport_id id;
+//
+//        status = pjsua_transport_create(PJSIP_TRANSPORT_TCP, &cfg, &id);
+//
+//        if (status != PJ_SUCCESS) {
+//            NSLog(@"Error creating TCP transport");
+//        } else {
+//            self.tcpTransportId = id;
+//        }
+//    }
+//
+//    // Add TLS transport.
+//    {
+//        pjsua_transport_config cfg;
+//        pjsua_transport_config_default(&cfg);
+//        pjsua_transport_id id;
+//
+//        status = pjsua_transport_create(PJSIP_TRANSPORT_TLS, &cfg, &id);
+//
+//        if (status != PJ_SUCCESS) {
+//            NSLog(@"Error creating TLS transport");
+//        } else {
+//            self.tlsTransportId = id;
+//        }
+//    }
+
     // Initialization is done, now start pjsua
     status = pjsua_start();
-    if (status != PJ_SUCCESS) NSLog(@"Error starting pjsua");
-    
-    return self;
+    if (status != PJ_SUCCESS) {
+        NSLog(@"Error starting pjsua");
+        return FALSE;
+    }
+
+    return TRUE;
 }
 
-- (NSDictionary *)start: (NSDictionary *)config {
+- (NSDictionary *)getInitialState:(NSDictionary *)config {
     NSMutableArray *accountsResult = [[NSMutableArray alloc] initWithCapacity:[@([self.accounts count]) unsignedIntegerValue]];
     NSMutableArray *callsResult = [[NSMutableArray alloc] initWithCapacity:[@([self.calls count]) unsignedIntegerValue]];
     NSDictionary *settingsResult = @{ @"codecs": [self getCodecs] };
@@ -181,6 +167,11 @@
     }
 
     return @{@"accounts": accountsResult, @"calls": callsResult, @"settings": settingsResult, @"connectivity": @YES};
+}
+
+- (BOOL)stop {
+    pj_status_t status = pjsua_destroy2(PJSUA_DESTROY_NO_RX_MSG);
+    return status == PJ_SUCCESS;
 }
 
 - (void)updateStunServers:(int)accountId stunServerList:(NSArray *)stunServerList {

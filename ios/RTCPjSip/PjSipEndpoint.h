@@ -19,7 +19,9 @@
 +(instancetype)instance;
 +(instancetype)instanceWithConfig:(NSDictionary *)config;
 
--(NSDictionary *)start: (NSDictionary *) config;
+-(BOOL)startWithConfig:(NSDictionary *)config;
+-(NSDictionary *)getInitialState: (NSDictionary *)config;
+-(BOOL)stop;
 
 -(void) updateStunServers: (int) accountId stunServerList:(NSArray *)stunServerList;
 

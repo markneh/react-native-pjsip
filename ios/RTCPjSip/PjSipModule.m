@@ -32,8 +32,14 @@
 RCT_EXPORT_METHOD(start: (NSDictionary *) config callback: (RCTResponseSenderBlock) callback) {
     [PjSipEndpoint instanceWithConfig:config].bridge = self.bridge;
 
-    NSDictionary *result = [[PjSipEndpoint instance] start: config];
-    callback(@[@TRUE, result]);
+    BOOL success = [[PjSipEndpoint instance] startWithConfig:config];
+    NSDictionary *initialState = [[PjSipEndpoint instance] getInitialState:config];
+    callback(@[@(success), initialState]);
+}
+
+RCT_EXPORT_METHOD(stop: (RCTResponseSenderBlock)callback) {
+    BOOL success = [[PjSipEndpoint instance] stop];
+    callback(@[@(success), @{}]);
 }
 
 RCT_EXPORT_METHOD(updateStunServers: (int) accountId stunServerList:(NSArray *) stunServerList callback:(RCTResponseSenderBlock) callback) {
