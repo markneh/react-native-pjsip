@@ -7,6 +7,8 @@
 @property bool isHeld;
 @property bool isMuted;
 
+@property (nonatomic, strong) NSString *xCallId;
+
 + (instancetype)itemConfig:(int)id;
 
 - (void)hangup;

@@ -9,7 +9,7 @@ export default class Call {
             state, stateText, held, muted, speaker,
             connectDuration, totalDuration,
             remoteOfferer, remoteAudioCount, remoteVideoCount, audioCount, videoCount,
-            lastStatusCode, lastReason, media, provisionalMedia
+            lastStatusCode, lastReason, media, provisionalMedia, xCallId
         }) {
         let remoteNumber = null;
         let remoteName = null;
@@ -31,6 +31,7 @@ export default class Call {
 
         this._id = id;
         this._callId = callId;
+        this._xCallId = xCallId;
         this._accountId = accountId;
         this._localContact = localContact;
         this._localUri = localUri;
@@ -84,6 +85,9 @@ export default class Call {
         return this._callId;
     }
 
+    getXCallId() {
+        return this._xCallId;
+    }
 
     /**
      * Up-to-date call duration in seconds.

@@ -400,7 +400,25 @@ static void onCallReceived(pjsua_acc_id accId, pjsua_call_id callId, pjsip_rx_da
 
     PjSipCall *call = [PjSipCall itemConfig:callId];
     endpoint.calls[@(callId)] = call;
-    
+
+    pjsip_msg *messageInfo = rx->msg_info.msg;
+
+    pjsip_hdr *hdr ;
+    for (hdr = messageInfo->hdr.next ; hdr != &messageInfo->hdr ; hdr = hdr->next) {
+        NSString *name = [PjSipUtil toString:&hdr->name]; //X-UUID
+
+        if ([[name lowercaseString] isEqualToString:[@"X-UUID" lowercaseString]]) {
+            /* write header value to buffer */
+            char value[ 512 ] = { 0 };
+            hdr->vptr->print_on( hdr, value, 512 );
+
+            NSString *fullHeader = [NSString stringWithCString:value encoding:NSUTF8StringEncoding];
+            NSString *stringToRemove = [NSString stringWithFormat:@"%@: ", name];
+            NSString *xCallId = [fullHeader stringByReplacingOccurrencesOfString:stringToRemove withString:@""];
+            call.xCallId = xCallId;
+        }
+    }
+
     [endpoint emmitCallReceived:call];
 }
 

@@ -175,6 +175,7 @@
     return @{
         @"id": @(self.id),
         @"callId": [PjSipUtil toString:&info.call_id],
+        @"xCallId": self.xCallId ? self.xCallId : @"",
         @"accountId": @(info.acc_id),
 
         @"localContact": [PjSipUtil toString:&info.local_contact],
