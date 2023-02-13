@@ -311,27 +311,6 @@
 
 #pragma mark - Settings
 
--(void) changeOrientation: (NSString*) orientation {
-    pjmedia_orient orient = PJMEDIA_ORIENT_ROTATE_90DEG;
-    
-    if ([orientation isEqualToString:@"PJMEDIA_ORIENT_ROTATE_270DEG"]) {
-        orient = PJMEDIA_ORIENT_ROTATE_270DEG;
-    } else if ([orientation isEqualToString:@"PJMEDIA_ORIENT_ROTATE_180DEG"]) {
-        orient = PJMEDIA_ORIENT_ROTATE_180DEG;
-    } else if ([orientation isEqualToString:@"PJMEDIA_ORIENT_NATURAL"]) {
-        orient = PJMEDIA_ORIENT_NATURAL;
-    }
-    
-    /* Here we set the orientation for all video devices.
-     * This may return failure for renderer devices or for
-     * capture devices which do not support orientation setting,
-     * we can simply ignore them.
-    */
-    for (int i = pjsua_vid_dev_count() - 1; i >= 0; i--) {
-        pjsua_vid_dev_set_setting(i, PJMEDIA_VID_DEV_CAP_ORIENTATION, &orient, PJ_TRUE);
-    }
-}
-
 -(void) changeCodecSettings: (NSDictionary*) codecSettings {
 
     for (NSString * key in codecSettings) {

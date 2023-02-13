@@ -32,7 +32,6 @@
 -(void)useSpeaker;
 -(void)useEarpiece;
 
--(void)changeOrientation: (NSString*) orientation;
 -(void)changeCodecSettings: (NSDictionary*) codecSettings;
 -(NSDictionary *)getCodecs;
 
