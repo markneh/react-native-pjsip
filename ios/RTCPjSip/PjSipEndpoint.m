@@ -50,8 +50,7 @@
         cfg.cb.on_incoming_call = &onCallReceived;
         cfg.cb.on_call_state = &onCallStateChanged;
         cfg.cb.on_call_media_state = &onCallMediaStateChanged;
-        cfg.cb.on_call_media_event = &onCallMediaEvent;
-        
+
         cfg.cb.on_pager2 = &onMessageReceived;
 
         NSString *ua = config[@"service"][@"ua"];
@@ -428,28 +427,6 @@ static void onCallMediaStateChanged(pjsua_call_id callId) {
 
     [[NSNotificationCenter defaultCenter] postNotificationName:@"PjSipInvalidateVideo"
                                                         object:nil];
-}
-
-static void onCallMediaEvent(pjsua_call_id call_id,
-                             unsigned med_idx,
-                             pjmedia_event *event) {
-    if (event->type == PJMEDIA_EVENT_FMT_CHANGED) {
-        /* Adjust renderer window size to original video size */
-        pjsua_call_info ci;
-        pjsua_vid_win_id wid;
-        pjmedia_rect_size size;
-        
-        pjsua_call_get_info(call_id, &ci);
-        
-        if ((ci.media[med_idx].type == PJMEDIA_TYPE_VIDEO) &&
-            (ci.media[med_idx].dir & PJMEDIA_DIR_DECODING))
-        {
-            wid = ci.media[med_idx].stream.vid.win_in;
-            size = event->data.fmt_changed.new_fmt.det.vid.size;
-
-            pjsua_vid_win_set_size(wid, &size);
-        }
-    }
 }
 
 static void onMessageReceived(pjsua_call_id call_id, const pj_str_t *from,
