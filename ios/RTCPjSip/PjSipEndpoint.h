@@ -35,7 +35,7 @@
 -(void)changeCodecSettings: (NSDictionary*) codecSettings;
 -(NSDictionary *)getCodecs;
 
--(void)emmitRegistrationChanged:(PjSipAccount*) account;
+-(void)emmitRegistrationChanged:(PjSipAccount*) account regInfo:(NSDictionary *)regInfo;
 -(void)emmitCallReceived:(PjSipCall*) call;
 -(void)emmitCallUpdated:(PjSipCall*) call;
 -(void)emmitCallChanged:(PjSipCall*) call;

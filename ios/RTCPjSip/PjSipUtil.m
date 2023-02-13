@@ -265,4 +265,12 @@
 
 }
 
++ (NSDictionary *)mapRegInfo:(pjsua_reg_info *)info {
+    NSMutableDictionary *map = [[NSMutableDictionary alloc] init];
+    map[@"success"] = @(info->cbparam->status == PJ_SUCCESS);
+    map[@"code"] = @(info->cbparam->code);
+    map[@"reason"] = [self toString:&info->cbparam->reason];
+    return map;
+}
+
 @end

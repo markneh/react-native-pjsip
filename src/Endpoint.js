@@ -593,7 +593,7 @@ export default class Endpoint extends EventEmitter {
          * @event Endpoint#registration_changed
          * @property {Account} account
          */
-        this.emit("registration_changed", new Account(data));
+        this.emit("registration_changed", { account: new Account(data.account), regInfo: data.regInfo });
     }
 
     /**

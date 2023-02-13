@@ -46,7 +46,9 @@
         pjsua_config_default(&cfg);
 
         // cfg.cb.on_reg_state = [self performSelector:@selector(onRegState:) withObject: o];
-        cfg.cb.on_reg_state = &onRegStateChanged;
+        cfg.cb.on_reg_state = &onRegStateTest;
+        cfg.cb.on_reg_state2 = &onRegStateChanged;
+        cfg.cb.on_reg_started2 = &onRegStarted;
         cfg.cb.on_incoming_call = &onCallReceived;
         cfg.cb.on_call_state = &onCallStateChanged;
         cfg.cb.on_call_media_state = &onCallMediaStateChanged;
@@ -338,8 +340,12 @@
 
 #pragma mark - Events
 
--(void)emmitRegistrationChanged:(PjSipAccount*) account {
-    [self emmitEvent:@"pjSipRegistrationChanged" body:[account toJsonDictionary]];
+-(void)emmitRegistrationChanged:(PjSipAccount*) account  regInfo:(NSDictionary *)regInfo {
+    NSMutableDictionary *body = [[NSMutableDictionary alloc] init];
+    body[@"account"] = [account toJsonDictionary];
+    body[@"regInfo"] = regInfo;
+
+    [self emmitEvent:@"pjSipRegistrationChanged" body:body];
 }
 
 -(void)emmitCallReceived:(PjSipCall*) call {
@@ -369,12 +375,23 @@
 
 #pragma mark - Callbacks
 
-static void onRegStateChanged(pjsua_acc_id accId) {
+static void onRegStarted(pjsua_acc_id acc_id, pjsua_reg_info *info) {
+
+}
+
+static void onRegStateTest(pjsua_acc_id acc_id) {
     PjSipEndpoint* endpoint = [PjSipEndpoint instance];
-    PjSipAccount* account = [endpoint findAccount:accId];
-    
+    PjSipAccount* account = [endpoint findAccount:acc_id];
+
+}
+
+static void onRegStateChanged(pjsua_acc_id acc_id, pjsua_reg_info *info) {
+    PjSipEndpoint* endpoint = [PjSipEndpoint instance];
+    PjSipAccount* account = [endpoint findAccount:acc_id];
+    NSDictionary *regInfo = [PjSipUtil mapRegInfo:info];
+
     if (account) {
-        [endpoint emmitRegistrationChanged:account];
+        [endpoint emmitRegistrationChanged:account regInfo:regInfo];
     }
 }
 
