@@ -6,6 +6,7 @@
 
 @interface PjSipEndpoint : NSObject
 
+@property (nonatomic, assign, readonly) BOOL isStarted;
 @property NSMutableDictionary* accounts;
 @property NSMutableDictionary* calls;
 @property(nonatomic, strong) RCTBridge *bridge;

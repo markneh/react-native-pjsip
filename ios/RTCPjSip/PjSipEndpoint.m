@@ -10,6 +10,12 @@
 #import "PjSipEndpoint.h"
 #import "PjSipMessage.h"
 
+@interface PjSipEndpoint()
+
+@property (nonatomic, assign, readwrite) BOOL isStarted;
+
+@end
+
 @implementation PjSipEndpoint
 
 + (instancetype) instance {
@@ -31,7 +37,22 @@
     return self;
 }
 
+
 - (BOOL)startWithConfig:(NSDictionary *)config {
+
+    if (self.isStarted) {
+        return FALSE;
+    }
+
+    BOOL success = [self performStartWithConfig:config];
+
+    self.isStarted = success;
+
+    return success;
+}
+
+- (BOOL)performStartWithConfig:(NSDictionary *)config {
+
     self.accounts = [[NSMutableDictionary alloc] initWithCapacity:12];
     self.calls = [[NSMutableDictionary alloc] initWithCapacity:12];
 
@@ -170,8 +191,23 @@
 }
 
 - (BOOL)stop {
+
+    if (!self.isStarted) {
+        return FALSE;
+    }
+
     pj_status_t status = pjsua_destroy2(PJSUA_DESTROY_NO_RX_MSG);
-    return status == PJ_SUCCESS;
+
+    BOOL success = status == PJ_SUCCESS;
+
+    self.isStarted = success;
+
+    return success;
+}
+
+- (void)setIsStarted:(BOOL)isStarted {
+    _isStarted = isStarted;
+    [self emmitLaunchStatusUpdate:isStarted];
 }
 
 - (void)updateStunServers:(int)accountId stunServerList:(NSArray *)stunServerList {
@@ -357,6 +393,10 @@
 
 -(void)emmitLogMessage:(NSString *)message {
     [self emmitEvent:@"pjSipLogReceived" body:message];
+}
+
+-(void)emmitLaunchStatusUpdate:(BOOL)isLaunched {
+    [self emmitEvent:@"pjSipLaunchStatusUpdated" body:@{@"isLaunched":@(isLaunched)}];
 }
 
 -(void)emmitEvent:(NSString*) name body:(id)body {
