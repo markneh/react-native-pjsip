@@ -42,6 +42,10 @@ RCT_EXPORT_METHOD(stop: (RCTResponseSenderBlock)callback) {
     callback(@[@(success), @{}]);
 }
 
+RCT_EXPORT_METHOD(isStarted: (RCTResponseSenderBlock)callback) {
+    callback(@[@([[PjSipEndpoint instance] isStarted]), @{}]);
+}
+
 RCT_EXPORT_METHOD(updateStunServers: (int) accountId stunServerList:(NSArray *) stunServerList callback:(RCTResponseSenderBlock) callback) {
     [[PjSipEndpoint instance] updateStunServers:accountId stunServerList:stunServerList];
     callback(@[@TRUE]);
