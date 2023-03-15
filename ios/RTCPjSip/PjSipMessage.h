@@ -1,4 +1,4 @@
-#import <React/RCTUtils.h>
+#import <Foundation/Foundation.h>
 
 @interface PjSipMessage : NSObject
 
