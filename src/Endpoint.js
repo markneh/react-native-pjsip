@@ -60,6 +60,7 @@ export default class Endpoint extends EventEmitter {
         DeviceEventEmitter.addListener('pjSipMessageReceived', this._onMessageReceived.bind(this));
         DeviceEventEmitter.addListener('pjSipConnectivityChanged', this._onConnectivityChanged.bind(this));
         DeviceEventEmitter.addListener('pjSipLogReceived', this._onLogReceived.bind(this));
+        DeviceEventEmitter.addListener('pjSipLaunchStatusUpdated', this._onLaunchStatusUpdate.bind(this));
     }
 
     /**
@@ -693,6 +694,10 @@ export default class Endpoint extends EventEmitter {
 
     _onLogReceived(data) {
       this.emit("log_received", data);
+    }
+
+    _onLaunchStatusUpdate(data) {
+      this.emit('launch_status_update', data);
     }
 
     /**
