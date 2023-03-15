@@ -32,8 +32,9 @@
     }
 }
 
-- (void) decline {
-    pjsua_call_hangup(self.id, PJSIP_SC_DECLINE, NULL, NULL);
+- (BOOL) decline {
+    pj_status_t status = pjsua_call_hangup(self.id, PJSIP_SC_DECLINE, NULL, NULL);
+    return status == PJ_SUCCESS;
 }
 
 

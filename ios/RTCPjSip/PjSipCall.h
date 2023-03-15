@@ -12,7 +12,7 @@
 + (instancetype)itemConfig:(int)id;
 
 - (void)hangup;
-- (void)decline;
+- (BOOL)decline;
 - (void)answer;
 - (void)hold;
 - (void)unhold;
