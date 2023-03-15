@@ -3,10 +3,13 @@
 #import "PjSipAccount.h"
 #import "PjSipCall.h"
 
+typedef void (^SIPEventCallback)(NSString *name, id metadata);
 
 @interface PjSipEndpoint : NSObject
 
 @property (nonatomic, assign, readonly) BOOL isStarted;
+@property (nonatomic, strong) SIPEventCallback sipEventCallback;
+
 @property NSMutableDictionary* accounts;
 @property NSMutableDictionary* calls;
 @property(nonatomic, strong) RCTBridge *bridge;

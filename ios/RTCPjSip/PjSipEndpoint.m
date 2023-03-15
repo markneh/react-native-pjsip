@@ -400,9 +400,13 @@
 }
 
 -(void)emmitEvent:(NSString*) name body:(id)body {
-    [[self.bridge eventDispatcher] sendAppEventWithName:name body:body];
+    if (self.bridge) {
+        [[self.bridge eventDispatcher] sendAppEventWithName:name body:body];
+    }
+    if (self.sipEventCallback) {
+        self.sipEventCallback(name, body);
+    }
 }
-
 
 #pragma mark - Callbacks
 
