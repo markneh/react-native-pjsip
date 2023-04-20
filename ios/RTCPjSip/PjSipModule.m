@@ -30,6 +30,13 @@
 }
 
 RCT_EXPORT_METHOD(start: (NSDictionary *) config callback: (RCTResponseSenderBlock) callback) {
+
+    if ([[PjSipEndpoint instanceWithConfig:config] isStarted]) {
+        NSDictionary *initialState = [[PjSipEndpoint instance] getInitialState:config];
+        callback(@[@(YES), initialState]);
+        return;
+    }
+
     [PjSipEndpoint instanceWithConfig:config].bridge = self.bridge;
 
     BOOL success = [[PjSipEndpoint instance] startWithConfig:config];
