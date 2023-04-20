@@ -22,36 +22,36 @@
 
         self.proxy = config[@"proxy"] == nil ? [NSNull null] : config[@"proxy"];
         self.transport = config[@"transport"] == nil ? [NSNull null] : config[@"transport"];
-        
+
         self.contactParams = config[@"contactParams"] == nil ? [NSNull null] : config[@"contactParams"];
         self.contactUriParams = config[@"contactUriParams"] == nil ? [NSNull null] : config[@"contactUriParams"];
-        
+
         self.regServer = config[@"regServer"] == nil ? [NSNull null] : config[@"regServer"];
         self.regTimeout = config[@"regTimeout"] == nil ? [NSNumber numberWithInteger:600] : config[@"regTimeout"];
         self.regHeaders = config[@"regHeaders"] == nil ? [NSNull null] : config[@"regHeaders"];
         self.regContactParams = config[@"regContactParams"] == nil ? [NSNull null] : config[@"regContactParams"];
         self.regOnAdd = config[@"regOnAdd"] == @YES || config[@"regOnAdd"] == nil ? true : false;
-        
+
         pj_status_t status;
 
         pjsua_acc_config cfg;
         pjsua_acc_config_default(&cfg);
-        
+
         cfg.vid_in_auto_show = PJ_FALSE;
         cfg.vid_out_auto_transmit = PJ_FALSE;
-        cfg.ka_interval = 120;
+        cfg.ka_interval = 0;
         cfg.use_rfc5626 = PJ_TRUE;
         cfg.allow_sdp_nat_rewrite = PJ_TRUE;
         cfg.sip_stun_use = PJSUA_STUN_RETRY_ON_FAILURE;
         cfg.media_stun_use = PJSUA_STUN_USE_DEFAULT;
 //        cfg.reg_retry_interval = 100000;
 //        cfg.reg_first_retry_interval = 100000;
-        
+
         // General settings
         {
             NSString *cfgId;
             NSString *cfgURI = [NSString stringWithFormat:@"sip:%@", self.domain];
-        
+
             if (![PjSipUtil isEmptyString:self.name]) {
                 cfgId = [NSString stringWithFormat:@"%@ <sip:%@@%@>", self.name, self.username, self.domain];
             } else {
@@ -72,7 +72,7 @@
 
             cfg.cred_count = 1;
             cfg.cred_info[0] = cred;
-        
+
             if (![PjSipUtil isEmptyString:self.contactParams]) {
                 cfg.contact_params = pj_str((char *) [self.contactParams UTF8String]);
             }
@@ -80,12 +80,12 @@
                 cfg.contact_uri_params = pj_str((char *) [self.contactUriParams UTF8String]);
             }
         }
-    
+
         // Registration settings
         {
             if (![self.regHeaders isKindOfClass:[NSNull class]]) {
                 pj_list_init(&cfg.reg_hdr_list);
-            
+
                 for(NSString* key in self.regHeaders) {
                     struct pjsip_generic_string_hdr hdr;
                     pj_str_t name = pj_str((char *) [key UTF8String]);
@@ -94,18 +94,18 @@
                     pj_list_push_back(&cfg.reg_hdr_list, &hdr);
                 }
             }
-        
+
             if (![PjSipUtil isEmptyString:self.regContactParams]) {
                 cfg.reg_contact_params = pj_str((char *) [self.regContactParams UTF8String]);
             }
-        
+
             if (self.regTimeout != nil && ![self.regTimeout isKindOfClass:[NSNull class]]) {
                 cfg.reg_timeout = (unsigned) [self.regTimeout intValue];
             }
 
             cfg.register_on_acc_add = self.regOnAdd;
         }
-        
+
         // Transport settings
         {
             if (![PjSipUtil isEmptyString:self.proxy]) {
@@ -114,7 +114,7 @@
             }
 
             cfg.transport_id = [[PjSipEndpoint instance] tcpTransportId];
-        
+
             if (![PjSipUtil isEmptyString:self.transport] && ![self.transport isEqualToString:@"TCP"]) {
                 if ([self.transport isEqualToString:@"UDP"]) {
                     cfg.transport_id = [[PjSipEndpoint instance] udpTransportId];
@@ -125,7 +125,7 @@
                 }
             }
         }
-        
+
         pjsua_acc_id account_id;
 
         status = pjsua_acc_add(&cfg, PJ_TRUE, &account_id);
@@ -142,23 +142,23 @@
 - (BOOL)updateCredentials:(NSDictionary *)credentials {
     NSString *username = credentials[@"username"];
     NSString *password = credentials[@"password"];
-    
+
     if (!username || !password) {
         return false;
     }
-    
+
     pj_pool_t *tmp_pool = pjsua_pool_create("tmp-pjsua", 1000, 1000);
     pjsua_acc_config config;
     pjsua_acc_get_config(self.id, tmp_pool, &config);
-    
+
     pjsip_cred_info cred = config.cred_info[0];
     cred.username = pj_str((char *) [self.username UTF8String]);
     cred.data = pj_str((char *) [self.password UTF8String]);
     cred.data_type = PJSIP_CRED_DATA_PLAIN_PASSWD;
-    
+
     pj_status_t status = pjsua_acc_modify(self.id, &config);
     pj_pool_release(tmp_pool);
-    
+
     return status == PJ_SUCCESS;
 }
 
@@ -194,7 +194,7 @@
         @"active": @"test",
         @"reason": @"test"
     };
-    
+
     return @{
         @"id": @(self.id),
         @"uri": [PjSipUtil toString:&info.acc_uri],
@@ -210,7 +210,7 @@
         @"regTimeout": self.regTimeout,
         @"regContactParams": self.regContactParams,
         @"regHeaders": self.regHeaders,
-        
+
         @"registration": registration
     };
 }
