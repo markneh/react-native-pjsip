@@ -32,9 +32,24 @@
     }
 }
 
-- (BOOL) decline {
-    pj_status_t status = pjsua_call_hangup(self.id, PJSIP_SC_DECLINE, NULL, NULL);
+- (BOOL)decline {
+    return [self declineWithReason:PJSIPCallDeclineReasonUnknown];
+}
+
+- (BOOL)declineWithReason:(PJSIPCallDeclineReason)reason {
+    unsigned code = [self callForReason:reason];
+    pj_status_t status = pjsua_call_hangup(self.id, code, NULL, NULL);
     return status == PJ_SUCCESS;
+}
+
+- (unsigned)callForReason:(PJSIPCallDeclineReason)reason {
+    switch (reason) {
+        case PJSIPCallDeclineReasonBusy:
+            return PJSIP_SC_BUSY_HERE;
+        case PJSIPCallDeclineReasonUnknown:
+        default:
+            return PJSIP_SC_DECLINE;
+    }
 }
 
 

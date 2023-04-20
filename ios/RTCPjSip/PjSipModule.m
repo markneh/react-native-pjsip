@@ -132,12 +132,15 @@ RCT_EXPORT_METHOD(hangupCall: (int) callId callback:(RCTResponseSenderBlock) cal
     }
 }
 
-RCT_EXPORT_METHOD(declineCall: (int) callId callback:(RCTResponseSenderBlock) callback) {
+RCT_EXPORT_METHOD(declineCall:(NSDictionary *)params callback:(RCTResponseSenderBlock) callback) {
+    int callId = [params[@"callId"] intValue];
+    int reason = [params[@"reason"] intValue];
+
     PjSipCall *call = [[PjSipEndpoint instance] findCall:callId];
 
     if (call) {
-        [call decline];
-        callback(@[@TRUE]);
+        BOOL success = [call declineWithReason:(PJSIPCallDeclineReason)reason];
+        callback(@[@(success)]);
     } else {
         callback(@[@FALSE, @"Call not found"]);
     }

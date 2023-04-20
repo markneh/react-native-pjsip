@@ -330,8 +330,12 @@ export default class Endpoint extends EventEmitter {
      * @returns {Promise}
      */
     declineCall(call) {
+        return this.declineCallWithReason(call, 0);
+    }
+
+    declineCallWithReason(call, reason) {
         return new Promise((resolve, reject) => {
-            NativeModules.PjSipModule.declineCall(call.getId(), (successful, data) => {
+            NativeModules.PjSipModule.declineCall({ callId: call.getId(), reason }, (successful, data) => {
                 if (successful) {
                     resolve(data);
                 } else {

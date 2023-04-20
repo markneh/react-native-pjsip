@@ -1,6 +1,11 @@
 #import <React/RCTUtils.h>
 #import <VialerPJSIP/pjsua.h>
 
+typedef NS_ENUM(NSUInteger, PJSIPCallDeclineReason) {
+    PJSIPCallDeclineReasonUnknown = 0,
+    PJSIPCallDeclineReasonBusy = 1,
+};
+
 @interface PjSipCall : NSObject
 
 @property int id;
@@ -13,6 +18,7 @@
 
 - (void)hangup;
 - (BOOL)decline;
+- (BOOL)declineWithReason:(PJSIPCallDeclineReason)reason;
 - (void)answer;
 - (void)reportRinging;
 - (void)hold;
