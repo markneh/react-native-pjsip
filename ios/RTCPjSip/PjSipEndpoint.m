@@ -8,6 +8,56 @@
 #import "PjSipEndpoint.h"
 #import "PjSipMessage.h"
 
+static pj_status_t on_tx_response(pjsip_tx_data *tdata)
+{
+    NSString *method = [PjSipUtil toString:&tdata->msg->line.req.method.name];
+
+    if ([[method lowercaseString] isEqualToString:@"ok"]) {
+        pjsip_msg_find_remove_hdr(tdata->msg, PJSIP_H_ALLOW, NULL);
+        pjsip_msg_find_remove_hdr(tdata->msg, PJSIP_H_SUPPORTED, NULL);
+        pjsip_msg_find_remove_hdr(tdata->msg, PJSIP_H_REQUIRE, NULL);
+
+        // Get the User-Agent header
+        const pj_str_t sess_exp_name = pj_str([@"Session-Expires" cStringUsingEncoding:NSUTF8StringEncoding]);
+
+        pjsip_generic_string_hdr *session_exp_header = (pjsip_generic_string_hdr *)
+        pjsip_msg_find_hdr_by_name(tdata->msg,
+                                   &sess_exp_name,
+                                   NULL);
+
+        // Remove the User-Agent header
+        if (session_exp_header != NULL) {
+            pj_list_erase(session_exp_header);
+        }
+    }
+
+    if ([[method lowercaseString] isEqualToString:@"ringing"]) {
+        pjsip_msg_find_remove_hdr(tdata->msg, PJSIP_H_ALLOW, NULL);
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+/* The module instance. */
+static pjsip_module mod_default_handler =
+{
+    NULL, NULL,                /* prev, next.        */
+    { "mod-default-handler", 19 },    /* Name.        */
+    -1,                    /* Id            */
+    PJSIP_MOD_PRIORITY_APPLICATION+99,    /* Priority            */
+    NULL,                /* load()        */
+    NULL,                /* start()        */
+    NULL,                /* stop()        */
+    NULL,                /* unload()        */
+    NULL,                /* on_rx_request()    */
+    NULL,                /* on_rx_response()    */
+    NULL,                /* on_tx_request.    */
+    &on_tx_response,                /* on_tx_response()    */
+    NULL,                /* on_tsx_state()    */
+
+};
+
 @interface PjSipEndpoint()
 
 @property (nonatomic, assign, readwrite) BOOL isStarted;
@@ -60,6 +110,12 @@
     status = pjsua_create();
     if (status != PJ_SUCCESS) {
         NSLog(@"Error in pjsua_create()");
+        return false;
+    }
+
+    status = pjsip_endpt_register_module(pjsua_get_pjsip_endpt(), &mod_default_handler);
+    if (status != PJ_SUCCESS) {
+        NSLog(@"Error registering module");
         return false;
     }
 
