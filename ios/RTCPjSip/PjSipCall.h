@@ -14,6 +14,7 @@
 - (void)hangup;
 - (BOOL)decline;
 - (void)answer;
+- (void)reportRinging;
 - (void)hold;
 - (void)unhold;
 - (void)mute;

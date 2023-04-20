@@ -453,6 +453,8 @@ static void onCallReceived(pjsua_acc_id accId, pjsua_call_id callId, pjsip_rx_da
     }
 
     [endpoint emmitCallReceived:call];
+
+    [call reportRinging];
 }
 
 static void onCallStateChanged(pjsua_call_id callId, pjsip_event *event) {

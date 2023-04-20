@@ -54,6 +54,16 @@
     pjsua_call_answer2(self.id, &callOpt, 200, NULL, &msgData);
 }
 
+- (void)reportRinging {
+
+    pjsua_msg_data msgData;
+    pjsua_msg_data_init(&msgData);
+    pjsua_call_setting callOpt;
+    pjsua_call_setting_default(&callOpt);
+
+    pjsua_call_answer2(self.id, &callOpt, 180, NULL, &msgData);
+}
+
 - (void)hold {
     if (self.isHeld) {
         return;
