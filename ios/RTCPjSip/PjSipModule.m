@@ -49,6 +49,11 @@ RCT_EXPORT_METHOD(stop: (RCTResponseSenderBlock)callback) {
     callback(@[@(success), @{}]);
 }
 
+RCT_EXPORT_METHOD(reconnect:(RCTResponseSenderBlock)callback) {
+    BOOL success = [[PjSipEndpoint instance] relaunchUDPConnection];
+    callback(@[@(success), @{}]);
+}
+
 RCT_EXPORT_METHOD(isStarted: (RCTResponseSenderBlock)callback) {
     callback(@[@([[PjSipEndpoint instance] isStarted]), @{}]);
 }

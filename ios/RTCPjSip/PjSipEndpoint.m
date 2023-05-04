@@ -218,6 +218,87 @@ static pjsip_module mod_default_handler =
     return TRUE;
 }
 
+- (BOOL)relaunchUDPConnection {
+    if (!self.isStarted) {
+        return FALSE;
+    }
+
+    pj_status_t status = [self recreateUDPTransport];
+    return status == PJ_SUCCESS;
+}
+
+- (pj_status_t)recreateUDPTransport {
+
+    pjsua_transport_id id = [self getIdOfFirstTransportIfPossible];
+
+    if (id == -1) {
+        return PJ_SUCCESS + 1; // pj_fail is 0 and pj_success is also 0
+    }
+
+    pj_status_t status = pjsua_transport_close(id, PJ_FALSE);
+    if (status != PJ_SUCCESS) {
+        [self logStatus:status];
+        return status;
+    }
+
+    status = [self launchUDPTransport];
+
+    return status;
+}
+
+- (pjsua_transport_id)getIdOfFirstTransportIfPossible {
+    pjsua_transport_id ids[PJSIP_MAX_TRANSPORTS];
+    unsigned int count = PJ_ARRAY_SIZE(ids);
+    pj_status_t status = pjsua_enum_transports(ids, &count);
+
+    if (status != PJ_SUCCESS) {
+        [self logStatus:status];
+        return -1;
+    }
+
+    if (count == 0) {
+        return -1;
+    }
+
+    pjsua_transport_id id = ids[0];
+    pjsua_transport_info info;
+    status = pjsua_transport_get_info(id, &info);
+    if (status != PJ_SUCCESS) {
+        [self logStatus:status];
+        return -1;
+    }
+
+    return id;
+}
+
+- (pj_status_t)launchUDPTransport {
+    pjsua_transport_config cfg;
+    pjsua_transport_config_default(&cfg);
+    pjsua_transport_id id;
+
+    pj_status_t status = pjsua_transport_create(PJSIP_TRANSPORT_UDP, &cfg, &id);
+
+    if (status != PJ_SUCCESS) {
+        [self logStatus:status];
+    } else {
+        self.udpTransportId = id;
+    }
+
+    return status;
+}
+
+- (void)logStatus:(pj_status_t)status {
+    NSString *errorMessage = [self errorMessageFromStatus:status];
+    [self emmitLogMessage:errorMessage];
+}
+
+- (NSString *)errorMessageFromStatus:(pj_status_t)status {
+    char errmsg[PJ_ERR_MSG_SIZE];
+    pj_strerror(status, errmsg, sizeof(errmsg));
+    NSString *message = [NSString stringWithFormat:@"%s", errmsg];
+    return message;
+}
+
 - (NSDictionary *)getInitialState:(NSDictionary *)config {
     NSMutableArray *accountsResult = [[NSMutableArray alloc] initWithCapacity:[@([self.accounts count]) unsignedIntegerValue]];
     NSMutableArray *callsResult = [[NSMutableArray alloc] initWithCapacity:[@([self.calls count]) unsignedIntegerValue]];

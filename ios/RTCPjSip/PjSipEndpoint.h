@@ -47,4 +47,6 @@ typedef void (^SIPEventCallback)(NSString *name, id metadata);
 -(void)emmitCallChanged:(PjSipCall*) call;
 -(void)emmitCallTerminated:(PjSipCall*) call;
 
+- (BOOL)relaunchUDPConnection;
+
 @end
