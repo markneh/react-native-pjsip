@@ -60,8 +60,6 @@ static pjsip_module mod_default_handler =
 
 @interface PjSipEndpoint()
 
-@property (nonatomic, assign, readwrite) BOOL isStarted;
-
 @end
 
 @implementation PjSipEndpoint
@@ -88,13 +86,14 @@ static pjsip_module mod_default_handler =
 
 - (BOOL)startWithConfig:(NSDictionary *)config {
 
-    if (self.isStarted) {
+    pjsua_state state = pjsua_get_state();
+    if (state != PJSUA_STATE_NULL) {
         return FALSE;
     }
 
     BOOL success = [self performStartWithConfig:config];
 
-    self.isStarted = success;
+    [self emmitLaunchStatusUpdate:success];
 
     return success;
 }
@@ -244,6 +243,10 @@ static pjsip_module mod_default_handler =
     return @{@"accounts": accountsResult, @"calls": callsResult, @"settings": settingsResult, @"connectivity": @YES};
 }
 
+- (BOOL)isStarted {
+    return pjsua_get_state() == PJSUA_STATE_RUNNING;
+}
+
 - (BOOL)stop {
 
     if (!self.isStarted) {
@@ -254,14 +257,9 @@ static pjsip_module mod_default_handler =
 
     BOOL success = status == PJ_SUCCESS;
 
-    self.isStarted = success;
+    [self emmitLaunchStatusUpdate:success];
 
     return success;
-}
-
-- (void)setIsStarted:(BOOL)isStarted {
-    _isStarted = isStarted;
-    [self emmitLaunchStatusUpdate:isStarted];
 }
 
 - (void)updateStunServers:(int)accountId stunServerList:(NSArray *)stunServerList {
