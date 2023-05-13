@@ -59,7 +59,7 @@ static pjsip_module mod_default_handler =
 };
 
 @interface PjSipEndpoint()
-
+@property (nonatomic, strong) NSDictionary *lastRegInfo;
 @end
 
 @implementation PjSipEndpoint
@@ -326,8 +326,19 @@ static pjsip_module mod_default_handler =
             [[PjSipEndpoint instance] updateStunServers:accountId stunServerList:config[@"service"][@"stun"]];
         }
     }
-
-    return @{@"accounts": accountsResult, @"calls": callsResult, @"settings": settingsResult, @"connectivity": @YES};
+    
+    NSMutableDictionary *info = [[NSMutableDictionary alloc] init];
+    
+    info[@"accounts"] = accountsResult;
+    info[@"calls"] = callsResult;
+    info[@"settings"] = settingsResult;
+    info[@"connectivity"] = @YES;
+    
+    if (self.lastRegInfo) {
+        info[@"regInfo"] = self.lastRegInfo;
+    }
+    
+    return info;
 }
 
 - (BOOL)isStarted {
@@ -514,6 +525,8 @@ static pjsip_module mod_default_handler =
     NSMutableDictionary *body = [[NSMutableDictionary alloc] init];
     body[@"account"] = [account toJsonDictionary];
     body[@"regInfo"] = regInfo;
+    
+    self.lastRegInfo = regInfo;
 
     [self emmitEvent:@"pjSipRegistrationChanged" body:body];
 }
