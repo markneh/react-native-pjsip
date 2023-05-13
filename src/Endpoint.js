@@ -759,3 +759,11 @@ export default class Endpoint extends EventEmitter {
     // setLogConfig(LogConfig value)
     // setLevel
 }
+
+export function pjLogMessage(message) {
+    return new Promise((resolve) => {
+        NativeModules.PjSipModule.logMessage(message, () => {
+            resolve()
+        });
+    })
+}

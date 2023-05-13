@@ -1,5 +1,6 @@
 #import "PjSipEndpoint.h"
 #import "PjSipModule.h"
+#import "PjSipUtil.h"
 
 #import <React/RCTBridge.h>
 #import <React/RCTEventDispatcher.h>
@@ -299,6 +300,15 @@ RCT_EXPORT_METHOD(changeCodecSettings: (NSDictionary*) codecSettings callback:(R
 RCT_EXPORT_METHOD(getCodecs: (RCTResponseSenderBlock)callback) {
     NSDictionary *codecs = [[PjSipEndpoint instance] getCodecs];
     callback(@[codecs]);
+}
+
+#pragma mark - Utility
+
+RCT_EXPORT_METHOD(logMessage:(NSDictionary *)message callback:(RCTResponseSenderBlock)callback) {
+    NSString *type = message[@"type"];
+    NSString *content = message[@"content"];
+    [PjSipUtil logPjMessage:type content:content];
+    callback(@[@YES]);
 }
 
 RCT_EXPORT_MODULE();

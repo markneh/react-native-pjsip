@@ -16,4 +16,6 @@
 
 + (NSDictionary *)mapRegInfo:(pjsua_reg_info *)info;
 
++ (void)logPjMessage:(NSString *)type content:(NSString *)text;
+
 @end
