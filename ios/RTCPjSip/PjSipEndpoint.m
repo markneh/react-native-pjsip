@@ -8,6 +8,21 @@
 #import "PjSipEndpoint.h"
 #import "PjSipMessage.h"
 
+/* Ringtones            US           UK  */
+#define RINGBACK_FREQ1        440        /* 400 */
+#define RINGBACK_FREQ2        480        /* 450 */
+#define RINGBACK_ON        2000    /* 400 */
+#define RINGBACK_OFF        4000    /* 200 */
+#define RINGBACK_CNT        1        /* 2   */
+#define RINGBACK_INTERVAL   4000    /* 2000 */
+
+#define RING_FREQ1        800
+#define RING_FREQ2        640
+#define RING_ON            200
+#define RING_OFF        100
+#define RING_CNT        3
+#define RING_INTERVAL        3000
+
 static pj_status_t on_tx_response(pjsip_tx_data *tdata)
 {
     NSString *method = [PjSipUtil toString:&tdata->msg->line.req.method.name];
@@ -64,6 +79,11 @@ static pjsip_module mod_default_handler =
 
 @implementation PjSipEndpoint
 
+pj_bool_t ringback_on;
+int ringback_slot;
+pjmedia_port *ringback_port;
+pj_pool_t *pool;
+
 + (instancetype) instance {
     return [self instanceWithConfig:nil];
 }
@@ -83,6 +103,9 @@ static pjsip_module mod_default_handler =
     return self;
 }
 
+- (void)dealloc {
+    pj_pool_release(pool);
+}
 
 - (BOOL)startWithConfig:(NSDictionary *)config {
 
@@ -165,6 +188,48 @@ static pjsip_module mod_default_handler =
             NSLog(@"Error in pjsua_init()");
             return FALSE;
         }
+
+        // init ringback tone
+        unsigned samples_per_frame;
+        pjmedia_tone_desc tone[RING_CNT+RINGBACK_CNT];
+        pj_str_t name;
+
+        samples_per_frame = mediaConfig.audio_frame_ptime * mediaConfig.clock_rate * mediaConfig.channel_count / 1000;
+
+        /* Ringback tone (call is ringing) */
+        name = pj_str("ringback");
+        pool = pjsua_pool_create("tmp-pjsua", 1000, 1000);
+
+        status = pjmedia_tonegen_create2(pool, &name,
+                         mediaConfig.clock_rate,
+                         mediaConfig.channel_count,
+                         samples_per_frame,
+                         16, PJMEDIA_TONEGEN_LOOP,
+                         &ringback_port);
+
+        if (status != PJ_SUCCESS) {
+            [self logStatus:status];
+            return NO;
+        }
+
+        pj_bzero(&tone, sizeof(tone));
+        for (unsigned i=0; i<RINGBACK_CNT; ++i) {
+            tone[i].freq1 = RINGBACK_FREQ1;
+            tone[i].freq2 = RINGBACK_FREQ2;
+            tone[i].on_msec = RINGBACK_ON;
+            tone[i].off_msec = RINGBACK_OFF;
+        }
+        tone[RINGBACK_CNT-1].off_msec = RINGBACK_INTERVAL;
+
+        pjmedia_tonegen_play(ringback_port, RINGBACK_CNT, tone, PJMEDIA_TONEGEN_LOOP);
+
+        status = pjsua_conf_add_port(pool, ringback_port, &ringback_slot);
+
+        if (status != PJ_SUCCESS) {
+            [self logStatus:status];
+            return NO;
+        }
+
     }
 
     // Add UDP transport.
@@ -631,6 +696,28 @@ static void onCallStateChanged(pjsua_call_id callId, pjsip_event *event) {
 
     [call onStateChanged:callInfo];
 
+    ring_stop();
+
+    if (callInfo.state == PJSIP_INV_STATE_CALLING) {
+        ringback_start();
+    }
+
+    if (callInfo.state == PJSIP_INV_STATE_EARLY) {
+        pjsip_msg *msg;
+
+        if (event->body.tsx_state.type == PJSIP_EVENT_RX_MSG) {
+            msg = event->body.tsx_state.src.rdata->msg_info.msg;
+        } else {
+            msg = event->body.tsx_state.src.tdata->msg;
+        }
+
+        int code = msg->line.status.code;
+
+        if (callInfo.role == PJSIP_ROLE_UAC && code == 180 && msg->body == NULL && callInfo.media_status == PJSUA_CALL_MEDIA_NONE) {
+            ringback_start();
+        }
+    }
+
     if (callInfo.state == PJSIP_INV_STATE_DISCONNECTED) {
         [endpoint.calls removeObjectForKey:@(callId)];
         [endpoint emmitCallTerminated:call];
@@ -642,6 +729,8 @@ static void onCallStateChanged(pjsua_call_id callId, pjsip_event *event) {
 
 static void onCallMediaStateChanged(pjsua_call_id callId) {
     PjSipEndpoint* endpoint = [PjSipEndpoint instance];
+
+    ring_stop();
 
     pjsua_call_info callInfo;
     pjsua_call_get_info(callId, &callInfo);
@@ -685,6 +774,33 @@ static void onLog(int level, const char *data, int len) {
             NSLog(@"%@", message);
             [[PjSipEndpoint instance] emmitLogMessage:message];
         });
+    }
+}
+
+
+static void ringback_start(void)
+{
+    if (ringback_on) {
+        return;
+    }
+
+    ringback_on = PJ_TRUE;
+
+    if (ringback_slot != PJSUA_INVALID_ID) {
+        pjsua_conf_connect(ringback_slot, 0);
+    }
+}
+
+static void ring_stop(void)
+{
+    if (ringback_on) {
+
+        ringback_on = PJ_FALSE;
+
+        if (ringback_slot!=PJSUA_INVALID_ID) {
+            pjsua_conf_disconnect(ringback_slot, 0);
+            pjmedia_tonegen_rewind(ringback_port);
+        }
     }
 }
 
