@@ -476,6 +476,10 @@ static pjsip_module mod_default_handler =
     }
 }
 
+- (void)resetSpeaker {
+    self.isSpeaker = NO;
+}
+
 #pragma mark - Settings
 
 -(void) changeCodecSettings: (NSDictionary*) codecSettings {
@@ -617,6 +621,7 @@ static void onCallStateChanged(pjsua_call_id callId, pjsip_event *event) {
     if (callInfo.state == PJSIP_INV_STATE_DISCONNECTED) {
         [endpoint.calls removeObjectForKey:@(callId)];
         [endpoint emmitCallTerminated:call];
+        [endpoint resetSpeaker]; // this might be triggered if there's another incoming call which is automatically declined
     } else {
         [endpoint emmitCallChanged:call];
     }
