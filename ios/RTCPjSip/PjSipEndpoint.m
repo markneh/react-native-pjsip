@@ -147,6 +147,12 @@ static pjsip_module mod_default_handler =
         log_cfg.console_level = 4;
         log_cfg.cb = &onLog;
 
+        NSArray *documentsDirectoryPaths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+        if ([documentsDirectoryPaths count] > 0) {
+            NSString *logFilePath = [documentsDirectoryPaths[0] stringByAppendingPathComponent:@"logs"];
+            log_cfg.log_filename = pj_str([logFilePath UTF8String]);
+        }
+
         // Init media config
         pjsua_media_config mediaConfig;
         pjsua_media_config_default(&mediaConfig);
@@ -658,6 +664,7 @@ static void onLog(int level, const char *data, int len) {
     NSString *message = [NSString stringWithCString:data encoding:NSUTF8StringEncoding];
     if (message && message.length > 0) {
         dispatch_async(dispatch_get_main_queue(), ^{
+            NSLog(@"%@", message);
             [[PjSipEndpoint instance] emmitLogMessage:message];
         });
     }
