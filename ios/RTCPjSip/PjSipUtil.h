@@ -18,4 +18,8 @@
 
 + (void)logPjMessage:(NSString *)type content:(NSString *)text;
 
++ (NSURL *)getLogFilePathUrl;
++ (void)clearLogsFile;
++ (BOOL)appendLogMessage:(NSString *)message;
+
 @end

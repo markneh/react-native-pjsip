@@ -599,6 +599,18 @@ export default class Endpoint extends EventEmitter {
         })
     }
 
+    getLogsFilePathUrl() {
+        return new Promise((resolve, reject) => {
+            NativeModules.PjSipModule.getLogsFilePathUrl(url => {
+                if (url) {
+                    resolve(url)
+                } else {
+                    reject();
+                }
+            })
+        })
+    }
+
     /**
      * @fires Endpoint#connectivity_changed
      * @private

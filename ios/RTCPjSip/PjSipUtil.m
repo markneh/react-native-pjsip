@@ -277,4 +277,60 @@
     PJ_LOG(4, ([type UTF8String], [text UTF8String]));
 }
 
+
++ (NSURL *)getLogFilePathUrl {
+    static NSURL *url = nil;
+    if (!url) {
+        NSArray *documentsDirectoryPaths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+        if ([documentsDirectoryPaths count] > 0) {
+            NSString *logFilePath = [documentsDirectoryPaths[0] stringByAppendingPathComponent:@"logs"];
+            url = [NSURL URLWithString:logFilePath];
+        }
+    }
+    return url;
+}
+
++ (void)clearLogsFile {
+    @try {
+        NSURL *url = [self getLogFilePathUrl];
+        [[NSFileManager defaultManager] createFileAtPath:url.absoluteString contents:[NSData data] attributes:nil];
+    } @catch (NSException *exception) {
+#ifdef DEBUG
+        NSLog(@"Failed to clear logs file %@", exception);
+#endif
+    }
+}
+
++ (BOOL)appendLogMessage:(NSString *)message {
+    @try {
+        NSURL *logFilePathUrl = [self getLogFilePathUrl];
+        if (!logFilePathUrl || !logFilePathUrl.absoluteString.length || !message.length) {
+            return NO;
+        }
+        
+        NSData *data = [message dataUsingEncoding:NSUTF8StringEncoding];
+        NSError *writingError;
+        NSFileHandle *fileHandle = [NSFileHandle fileHandleForWritingToURL:logFilePathUrl error:&writingError];
+    
+        if (writingError) {
+#ifdef DEBUG
+            NSLog(@"Failed to write log to file path %@", writingError);
+            return NO;
+#endif
+        } else if (!fileHandle) {
+            [data writeToURL:logFilePathUrl atomically:YES];
+        } else {
+            [fileHandle seekToEndOfFile];
+            [fileHandle writeData:data];
+            [fileHandle closeFile];
+        }
+        return YES;
+    } @catch (NSException *exception) {
+#ifdef DEBUG
+        NSLog(@"Failed to write logs to file path %@", exception);
+#endif
+        return NO;
+    }
+}
+
 @end

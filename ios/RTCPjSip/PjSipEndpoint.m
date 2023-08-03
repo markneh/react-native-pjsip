@@ -141,6 +141,8 @@ pj_pool_t *pool;
         return false;
     }
 
+    [PjSipUtil clearLogsFile];
+
     // Init pjsua
     {
         // Init the config structure
@@ -167,14 +169,9 @@ pj_pool_t *pool;
         // Init the logging config structure
         pjsua_logging_config log_cfg;
         pjsua_logging_config_default(&log_cfg);
+        log_cfg.level = 5;
         log_cfg.console_level = 4;
         log_cfg.cb = &onLog;
-
-        NSArray *documentsDirectoryPaths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
-        if ([documentsDirectoryPaths count] > 0) {
-            NSString *logFilePath = [documentsDirectoryPaths[0] stringByAppendingPathComponent:@"logs"];
-            log_cfg.log_filename = pj_str([logFilePath UTF8String]);
-        }
 
         // Init media config
         pjsua_media_config mediaConfig;
@@ -773,6 +770,7 @@ static void onLog(int level, const char *data, int len) {
         dispatch_async(dispatch_get_main_queue(), ^{
             NSLog(@"%@", message);
             [[PjSipEndpoint instance] emmitLogMessage:message];
+            [PjSipUtil appendLogMessage:message];
         });
     }
 }
