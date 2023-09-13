@@ -131,13 +131,13 @@ pj_pool_t *pool;
     // Create pjsua first
     status = pjsua_create();
     if (status != PJ_SUCCESS) {
-        NSLog(@"Error in pjsua_create()");
+        [self logStatus:status];
         return false;
     }
 
     status = pjsip_endpt_register_module(pjsua_get_pjsip_endpt(), &mod_default_handler);
     if (status != PJ_SUCCESS) {
-        NSLog(@"Error registering module");
+        [self logStatus:status];
         return false;
     }
 
@@ -182,7 +182,7 @@ pj_pool_t *pool;
         // Init the pjsua
         status = pjsua_init(&cfg, &log_cfg, &mediaConfig);
         if (status != PJ_SUCCESS) {
-            NSLog(@"Error in pjsua_init()");
+            [self logStatus:status];
             return FALSE;
         }
 
@@ -240,7 +240,8 @@ pj_pool_t *pool;
         status = pjsua_transport_create(PJSIP_TRANSPORT_UDP, &cfg, &id);
 
         if (status != PJ_SUCCESS) {
-            NSLog(@"Error creating UDP transport");
+            [self logStatus:status];
+            return NO;
         } else {
             self.udpTransportId = id;
         }
@@ -279,7 +280,7 @@ pj_pool_t *pool;
     // Initialization is done, now start pjsua
     status = pjsua_start();
     if (status != PJ_SUCCESS) {
-        NSLog(@"Error starting pjsua");
+        [self logStatus:status];
         return FALSE;
     }
 
@@ -416,6 +417,11 @@ pj_pool_t *pool;
     pj_status_t status = pjsua_destroy2(PJSUA_DESTROY_NO_RX_MSG);
 
     BOOL success = status == PJ_SUCCESS;
+    
+    if (success) {
+        self.lastRegInfo = nil;
+        [self emmitLaunchStatusUpdate:false];
+    }
 
     [self emmitLaunchStatusUpdate:success];
 
@@ -435,7 +441,6 @@ pj_pool_t *pool;
     pj_pool_t *pool = pjsua_pool_create("tmp-pjsua", 1000, 1000);
     pjsua_acc_config_default(&cfg_update);
     pjsua_acc_get_config(accountId, pool, &cfg_update);
-    NSLog([NSString stringWithFormat: @"I AM ACC ID: %d", accountId]);
     pjsua_update_stun_servers(size, srv, false);
 
     pjsua_acc_modify(accountId, &cfg_update);
@@ -768,7 +773,6 @@ static void onLog(int level, const char *data, int len) {
     NSString *message = [NSString stringWithCString:data encoding:NSUTF8StringEncoding];
     if (message && message.length > 0) {
         dispatch_async(dispatch_get_main_queue(), ^{
-            NSLog(@"%@", message);
             [[PjSipEndpoint instance] emmitLogMessage:message];
             [PjSipUtil appendLogMessage:message];
         });
