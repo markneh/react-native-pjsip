@@ -122,8 +122,12 @@ export default class Endpoint extends EventEmitter {
 
     isStarted() {
         return new Promise(function (resolve) {
-            NativeModules.PjSipModule.isStarted((result) => {
-                resolve(result);
+            NativeModules.PjSipModule.isStarted((result, params) => {
+                if (result && params) {
+                    resolve(params.is_started);
+                } else {
+                    resolve(false);
+                }
             })
         })
     }
