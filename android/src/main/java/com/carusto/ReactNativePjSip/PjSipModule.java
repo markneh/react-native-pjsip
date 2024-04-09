@@ -34,6 +34,38 @@ public class PjSipModule extends ReactContextBaseJavaModule {
         getReactApplicationContext().startService(intent);
     }
 
+    @ReactMethod void stop(Callback callback) {
+        // TODO: implement this method
+    }
+
+    @ReactMethod void reconnect(Callback callback) {
+        // TODO: implement this method
+    }
+
+    @ReactMethod
+    public void isStarted(Callback callback) {
+        int id = receiver.register(callback);
+        Intent intent = PjActions.createCheckIfStartedIntent(id, getReactApplicationContext());
+
+        getReactApplicationContext().startService(intent);
+    }
+
+    @ReactMethod
+    public void getCodecs(Callback callback) {
+        // TODO: implement this method
+//        callback.invoke();
+    }
+
+    @ReactMethod
+    public void logMessage(ReadableMap message, Callback callback) {
+        // TODO: implement this method
+    }
+
+    @ReactMethod
+    public void getLogsFilePathUrl(Callback callback) {
+        // TODO: implement this method
+    }
+
     @ReactMethod
     public void changeServiceConfiguration(ReadableMap configuration, Callback callback) {
         int id = receiver.register(callback);
@@ -76,6 +108,7 @@ public class PjSipModule extends ReactContextBaseJavaModule {
         getReactApplicationContext().startService(intent);
     }
 
+    // TODO: update intCallId to params
     @ReactMethod
     public void declineCall(int callId, Callback callback) {
         int callbackId = receiver.register(callback);
