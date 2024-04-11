@@ -48,6 +48,7 @@ public class PjActions {
     public static final String EVENT_STARTED = "com.carusto.account.started";
     public static final String EVENT_ACCOUNT_CREATED = "com.carusto.account.created";
     public static final String EVENT_REGISTRATION_CHANGED = "com.carusto.registration.changed";
+    public static final String EVENT_LAUNCH_STATUS_UPDATED = "com.carusto.launch.status.updated";
     public static final String EVENT_CALL_CHANGED = "com.carusto.call.changed";
     public static final String EVENT_CALL_TERMINATED = "com.carusto.call.terminated";
     public static final String EVENT_CALL_RECEIVED = "com.carusto.call.received";

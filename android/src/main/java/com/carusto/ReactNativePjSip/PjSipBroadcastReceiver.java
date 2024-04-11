@@ -43,6 +43,7 @@ public class PjSipBroadcastReceiver extends BroadcastReceiver {
         filter.addAction(PjActions.EVENT_STARTED);
         filter.addAction(PjActions.EVENT_ACCOUNT_CREATED);
         filter.addAction(PjActions.EVENT_REGISTRATION_CHANGED);
+        filter.addAction(PjActions.EVENT_LAUNCH_STATUS_UPDATED);
         filter.addAction(PjActions.EVENT_CALL_RECEIVED);
         filter.addAction(PjActions.EVENT_CALL_CHANGED);
         filter.addAction(PjActions.EVENT_CALL_TERMINATED);
@@ -69,6 +70,9 @@ public class PjSipBroadcastReceiver extends BroadcastReceiver {
             case PjActions.EVENT_REGISTRATION_CHANGED:
                 onRegistrationChanged(intent);
                 break;
+            case PjActions.EVENT_LAUNCH_STATUS_UPDATED:
+                onLaunchStatusUpdate(intent);
+                break;
             case PjActions.EVENT_MESSAGE_RECEIVED:
                 onMessageReceived(intent);
                 break;
@@ -91,6 +95,12 @@ public class PjSipBroadcastReceiver extends BroadcastReceiver {
         String json = intent.getStringExtra("data");
         Object params = ArgumentUtils.fromJson(json);
         emit("pjSipRegistrationChanged", params);
+    }
+
+    private void onLaunchStatusUpdate(Intent intent) {
+        String json = intent.getStringExtra("data");
+        Object params = ArgumentUtils.fromJson(json);
+        emit("pjSipLaunchStatusUpdated", params);
     }
 
     private void onMessageReceived(Intent intent) {

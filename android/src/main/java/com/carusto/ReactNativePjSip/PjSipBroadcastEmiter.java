@@ -92,6 +92,21 @@ public class PjSipBroadcastEmiter {
         context.sendBroadcast(intent);
     }
 
+    public void fireLaunchStatusUpdateEvent(Boolean isLaunched) {
+        Intent intent = new Intent();
+        intent.setAction(PjActions.EVENT_LAUNCH_STATUS_UPDATED);
+
+        try {
+            JSONObject dataObject = new JSONObject();
+            dataObject.put("isLaunched", isLaunched);
+            intent.putExtra("data", dataObject.toString());
+
+            context.sendBroadcast(intent);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     public void fireMessageReceivedEvent(PjSipMessage message) {
         Intent intent = new Intent();
         intent.setAction(PjActions.EVENT_MESSAGE_RECEIVED);

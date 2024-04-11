@@ -207,9 +207,11 @@ public class PjSipService extends Service {
 
             mEndpoint.libStart();
             handleStart(startIntent, null);
+            emmitLaunchStatusUpdateEvent();
         } catch (Exception e) {
             Log.e(TAG, "Error while starting PJSIP", e);
             handleStart(startIntent, e);
+            emmitLaunchStatusUpdateEvent();
         }
     }
 
@@ -299,12 +301,15 @@ public class PjSipService extends Service {
     private void destroyEndpoint() throws Exception {
         if (mEndpoint == null) {
             Log.d(TAG, "Attempt to destroy endpoint but none was initialized");
+            emmitLaunchStatusUpdateEvent();
             return;
         }
 
         mEndpoint.libDestroy();
         mEndpoint.delete();
         mEndpoint = null;
+
+        emmitLaunchStatusUpdateEvent();
     }
 
     private void job(Runnable job) {
