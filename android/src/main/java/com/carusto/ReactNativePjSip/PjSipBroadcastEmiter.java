@@ -33,7 +33,10 @@ public class PjSipBroadcastEmiter {
             JSONObject data = new JSONObject();
             data.put("accounts", dataAccounts);
             data.put("calls", dataCalls);
-            data.put("settings", settings);
+
+            if (settings != null) {
+                data.put("settings", settings);
+            }
 
             Intent intent = new Intent();
             intent.setAction(PjActions.EVENT_STARTED);

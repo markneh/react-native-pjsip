@@ -50,6 +50,7 @@ import org.pjsip.pjsua2.pjmedia_orient;
 import org.pjsip.pjsua2.pjsip_inv_state;
 import org.pjsip.pjsua2.pjsip_status_code;
 import org.pjsip.pjsua2.pjsip_transport_type_e;
+import org.pjsip.pjsua2.pjsua_state;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -116,20 +117,22 @@ public class PjSipService extends Service {
         return null;
     }
 
-    private void load() {
+    private void initEndpoint(Intent startIntent) {
         // Load native libraries
         try {
             System.loadLibrary("openh264");
         } catch (UnsatisfiedLinkError error) {
             Log.e(TAG, "Error while loading OpenH264 native library", error);
-            throw new RuntimeException(error);
+            handleStart(startIntent, new RuntimeException(error));
+            return;
         }
 
         try {
             System.loadLibrary("pjsua2");
         } catch (UnsatisfiedLinkError error) {
             Log.e(TAG, "Error while loading PJSIP pjsua2 native library", error);
-            throw new RuntimeException(error);
+            handleStart(startIntent, new RuntimeException(error));
+            return;
         }
 
         // Start stack
@@ -146,6 +149,7 @@ public class PjSipService extends Service {
                     try {
                         mEndpoint.libRegisterThread(Thread.currentThread().getName());
                     } catch (Exception e) {
+                        // TODO: analyze this - is this critical?
                         e.printStackTrace();
                     }
                 }
@@ -202,74 +206,105 @@ public class PjSipService extends Service {
             }
 
             mEndpoint.libStart();
+            handleStart(startIntent, null);
         } catch (Exception e) {
             Log.e(TAG, "Error while starting PJSIP", e);
+            handleStart(startIntent, e);
         }
     }
 
+    private boolean isStarted() {
+        if (mEndpoint == null) {
+            return false;
+        }
+
+        return mEndpoint.libGetState() == pjsua_state.PJSUA_STATE_RUNNING;
+    }
 
     @Override
     public int onStartCommand(final Intent intent, int flags, int startId) {
-        if (!mInitialized) {
-            if (intent != null && intent.hasExtra("service")) {
-                mServiceConfiguration = ServiceConfigurationDTO.fromMap((Map) intent.getSerializableExtra("service"));
-            }
-
-            mWorkerThread = new HandlerThread(getClass().getSimpleName(), Process.THREAD_PRIORITY_FOREGROUND);
-            mWorkerThread.setPriority(Thread.MAX_PRIORITY);
-            mWorkerThread.start();
-            mHandler = new Handler(mWorkerThread.getLooper());
-            mEmitter = new PjSipBroadcastEmiter(this);
-            mAudioManager = (AudioManager) getApplicationContext().getSystemService(AUDIO_SERVICE);
-            mPowerManager = (PowerManager) getApplicationContext().getSystemService(POWER_SERVICE);
-            mWifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-            mWifiLock = mWifiManager.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, this.getPackageName()+"-wifi-call-lock");
-            mWifiLock.setReferenceCounted(false);
-            mTelephonyManager = (TelephonyManager) getApplicationContext().getSystemService(Context.TELEPHONY_SERVICE);
-            mGSMIdle = mTelephonyManager.getCallState() == TelephonyManager.CALL_STATE_IDLE;
-
-            IntentFilter phoneStateFilter = new IntentFilter(TelephonyManager.ACTION_PHONE_STATE_CHANGED);
-            registerReceiver(mPhoneStateChangedReceiver, phoneStateFilter);
-
-            mInitialized = true;
-
-            job(new Runnable() {
-                @Override
-                public void run() {
-                    load();
-                }
-            });
+        if (intent == null) {
+            return START_STICKY;
         }
 
-        if (intent != null) {
-            job(new Runnable() {
-                @Override
-                public void run() {
-                    handle(intent);
-                }
-            });
+        if (!mInitialized) {
+            performInit(intent);
+        }
+
+        String action = intent.getAction();
+        if (action != null && action.equals(PjActions.ACTION_CHECK_IF_STARTED)) {
+            handleCheckIfStartedIntent(intent);
+            return START_NOT_STICKY;
+        }
+
+        boolean isStartIntent = action != null && action.equals(PjActions.ACTION_START);
+        if (isStartIntent && isStarted()) {
+            mEmitter.fireStarted(intent, mAccounts, mCalls, getCodecsAsJson());
+        } else if (isStartIntent) {
+            job(() -> initEndpoint(intent));
+        } else {
+            job(() -> handle(intent));
         }
 
         return START_NOT_STICKY;
     }
 
+    private void performInit(Intent intent) {
+        if (intent != null && intent.hasExtra("service")) {
+            mServiceConfiguration = ServiceConfigurationDTO.fromMap((Map) intent.getSerializableExtra("service"));
+        }
+
+        mWorkerThread = new HandlerThread(getClass().getSimpleName(), Process.THREAD_PRIORITY_FOREGROUND);
+        mWorkerThread.setPriority(Thread.MAX_PRIORITY);
+        mWorkerThread.start();
+        mHandler = new Handler(mWorkerThread.getLooper());
+        mEmitter = new PjSipBroadcastEmiter(this);
+        mAudioManager = (AudioManager) getApplicationContext().getSystemService(AUDIO_SERVICE);
+        mPowerManager = (PowerManager) getApplicationContext().getSystemService(POWER_SERVICE);
+        mWifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        mWifiLock = mWifiManager.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, this.getPackageName()+"-wifi-call-lock");
+        mWifiLock.setReferenceCounted(false);
+        mTelephonyManager = (TelephonyManager) getApplicationContext().getSystemService(Context.TELEPHONY_SERVICE);
+        mGSMIdle = mTelephonyManager.getCallState() == TelephonyManager.CALL_STATE_IDLE;
+
+        IntentFilter phoneStateFilter = new IntentFilter(TelephonyManager.ACTION_PHONE_STATE_CHANGED);
+        registerReceiver(mPhoneStateChangedReceiver, phoneStateFilter);
+
+        mInitialized = true;
+    }
+
     @Override
     public void onDestroy() {
+
+        Runtime.getRuntime().gc();
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+            Log.d(TAG, "Quiting worker thread safely");
             mWorkerThread.quitSafely();
         }
 
         try {
-            if (mEndpoint != null) {
-                mEndpoint.libDestroy();
-            }
+            destroyEndpoint();
         } catch (Exception e) {
-            Log.w(TAG, "Failed to destroy PjSip library", e);
+            e.printStackTrace();
         }
 
         unregisterReceiver(mPhoneStateChangedReceiver);
 
+        Log.d(TAG, "on destroy was called");
+
         super.onDestroy();
+    }
+
+    private void destroyEndpoint() throws Exception {
+        if (mEndpoint == null) {
+            Log.d(TAG, "Attempt to destroy endpoint but none was initialized");
+            return;
+        }
+
+        mEndpoint.libDestroy();
+        mEndpoint.delete();
+        mEndpoint = null;
     }
 
     private void job(Runnable job) {
@@ -331,8 +366,12 @@ public class PjSipService extends Service {
 
         switch (intent.getAction()) {
             // General actions
+            case PjActions.ACTION_STOP:
+                handleStopIntent(intent);
+                break;
             case PjActions.ACTION_START:
-                handleStart(intent);
+            case PjActions.ACTION_CHECK_IF_STARTED:
+                // this will be handled in onStart method
                 break;
 
             // Account actions
@@ -399,16 +438,41 @@ public class PjSipService extends Service {
         }
     }
 
-    private void handleStart(Intent intent) {
-        try {
-            // Modify existing configuration if it changes during application reload.
-            if (intent.hasExtra("service")) {
-                ServiceConfigurationDTO newServiceConfiguration = ServiceConfigurationDTO.fromMap((Map) intent.getSerializableExtra("service"));
-                if (!newServiceConfiguration.equals(mServiceConfiguration)) {
-                    updateServiceConfiguration(newServiceConfiguration);
-                }
-            }
+    private void handleStart(Intent intent, Exception e) {
+        if (e != null) {
+            mEmitter.fireIntentHandled(intent, e);
+            return;
+        }
 
+        // Modify existing configuration if it changes during application reload.
+        if (intent.hasExtra("service")) {
+            ServiceConfigurationDTO newServiceConfiguration = ServiceConfigurationDTO.fromMap((Map) intent.getSerializableExtra("service"));
+            if (!newServiceConfiguration.equals(mServiceConfiguration)) {
+                updateServiceConfiguration(newServiceConfiguration);
+            }
+        }
+
+        JSONObject codecs = getCodecsAsJson();
+
+        mEmitter.fireStarted(intent, mAccounts, mCalls, codecs);
+    }
+
+    private void handleStopIntent(Intent intent) {
+        if (!isStarted()) {
+            mEmitter.fireIntentHandled(intent);
+            return;
+        }
+
+       try {
+           destroyEndpoint();
+           mEmitter.fireIntentHandled(intent);
+       } catch (Exception e) {
+           mEmitter.fireIntentHandled(intent, e);
+       }
+    }
+
+    private JSONObject getCodecsAsJson() {
+        try {
             CodecInfoVector codVect = mEndpoint.codecEnum();
             JSONObject codecs = new JSONObject();
 
@@ -423,10 +487,10 @@ public class PjSipService extends Service {
             JSONObject settings = mServiceConfiguration.toJson();
             settings.put("codecs", codecs);
 
-            mEmitter.fireStarted(intent, mAccounts, mCalls, settings);
+            return settings;
         } catch (Exception error) {
             Log.e(TAG, "Error while building codecs list", error);
-            throw new RuntimeException(error);
+            return null;
         }
     }
 
@@ -889,6 +953,17 @@ public class PjSipService extends Service {
             }
 
             mEmitter.fireIntentHandled(intent);
+        } catch (Exception e) {
+            mEmitter.fireIntentHandled(intent, e);
+        }
+    }
+
+    private void handleCheckIfStartedIntent(Intent intent) {
+        try {
+            boolean isStarted = isStarted();
+            JSONObject data = new JSONObject();
+            data.put("is_started", isStarted);
+            mEmitter.fireIntentHandled(intent, data);
         } catch (Exception e) {
             mEmitter.fireIntentHandled(intent, e);
         }

@@ -22,6 +22,7 @@ public class PjActions {
     public static final String TAG = "PjActions";
 
     public static final String ACTION_START = "start";
+    public static final String ACTION_STOP = "stop";
     public static final String ACTION_CHECK_IF_STARTED = "check_if_started";
     public static final String ACTION_CREATE_ACCOUNT = "account_create";
     public static final String ACTION_CHANGE_CODEC_SETTINGS= "change_codec_settings'";
@@ -60,6 +61,14 @@ public class PjActions {
         intent.putExtra("callback_id", callbackId);
 
         formatIntent(intent, configuration);
+
+        return intent;
+    }
+
+    public static Intent createStopIntent(int callbackId, Context context) {
+        Intent intent = new Intent(context, PjSipService.class);
+        intent.setAction(PjActions.ACTION_STOP);
+        intent.putExtra("callback_id", callbackId);
 
         return intent;
     }
