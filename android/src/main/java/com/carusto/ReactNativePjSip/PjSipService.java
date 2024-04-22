@@ -998,6 +998,11 @@ public class PjSipService extends Service {
         getEmitter().fireRegistrationChangeEvent(account);
     }
 
+    void emmitLaunchStatusUpdateEvent() {
+        Log.d(TAG, "should emmit status to " + isStarted());
+        getEmitter().fireLaunchStatusUpdateEvent(isStarted());
+    }
+
     void emmitMessageReceived(PjSipAccount account, PjSipMessage message) {
         getEmitter().fireMessageReceivedEvent(message);
     }
