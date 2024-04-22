@@ -112,6 +112,7 @@ declare module 'react-native-pjsip' {
     ): Promise<unknown>;
     deleteAccount(account: Account): Promise<unknown>;
     makeCall(account: Account, destination: string): Promise<SipCall>;
+    dtmfCall(call: SipCall, digits: string): Promise<boolean>;
     answerCall: CallOperation;
     declineCall: CallOperation;
     declineCallWithReason: (
