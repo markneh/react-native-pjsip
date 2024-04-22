@@ -101,7 +101,7 @@ declare module 'react-native-pjsip' {
 
   export class Endpoint extends EventEmitter {
     start(configuration: Object): Promise<SipInitialState>;
-    stop(): Promise<unknown>;
+    stop(): Promise<boolean>;
     isStarted(): Promise<boolean>;
     reconnect(): Promise<boolean>;
     createAccount(account: CreateAccountParams): Promise<Account>;
