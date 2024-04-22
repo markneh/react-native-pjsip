@@ -465,13 +465,16 @@ public class PjSipService extends Service {
     private void handleStopIntent(Intent intent) {
         if (!isStarted()) {
             mEmitter.fireIntentHandled(intent);
+            emmitLaunchStatusUpdateEvent();
             return;
         }
 
        try {
            destroyEndpoint();
+           emmitLaunchStatusUpdateEvent();
            mEmitter.fireIntentHandled(intent);
        } catch (Exception e) {
+           emmitLaunchStatusUpdateEvent();
            mEmitter.fireIntentHandled(intent, e);
        }
     }
