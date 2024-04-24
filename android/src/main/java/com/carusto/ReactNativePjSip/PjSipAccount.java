@@ -16,6 +16,8 @@ public class PjSipAccount extends Account {
      */
     private String reason;
 
+    private OnRegStateParam lastRegStateParam;
+
     private PjSipService service;
 
     private AccountConfigurationDTO configuration;
@@ -52,9 +54,14 @@ public class PjSipAccount extends Account {
         }
     }
 
+    public OnRegStateParam getLastRegStateParam() {
+        return lastRegStateParam;
+    }
+
     @Override
     public void onRegState(OnRegStateParam prm) {
         reason = prm.getReason();
+        lastRegStateParam = prm;
         service.emmitRegistrationChanged(this, prm);
     }
 

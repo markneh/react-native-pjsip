@@ -998,7 +998,7 @@ public class PjSipService extends Service {
     }
 
     void emmitRegistrationChanged(PjSipAccount account, OnRegStateParam prm) {
-        getEmitter().fireRegistrationChangeEvent(account);
+        getEmitter().fireRegistrationChangeEvent(account, prm);
     }
 
     void emmitLaunchStatusUpdateEvent() {

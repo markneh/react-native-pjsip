@@ -1,5 +1,8 @@
 package com.carusto.ReactNativePjSip;
 
+import static org.pjsip.pjsua2.pj_constants_.PJ_SUCCESS;
+import org.json.JSONObject;
+import org.pjsip.pjsua2.OnRegStateParam;
 import org.pjsip.pjsua2.SipHeader;
 import org.pjsip.pjsua2.SipHeaderVector;
 
@@ -21,4 +24,15 @@ public class PjSipUtils {
         return hdrsVector;
     }
 
+    public static JSONObject mapRegStateToRegInfo(OnRegStateParam prm) {
+        try {
+            JSONObject regInfo = new JSONObject();
+            regInfo.put("success", prm.getStatus() == PJ_SUCCESS.swigValue());
+            regInfo.put("code", prm.getStatus());
+            regInfo.put("reason", prm.getReason());
+            return regInfo;
+        } catch (Exception e) {
+            return  null;
+        }
+    }
 }

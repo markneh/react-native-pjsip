@@ -1,10 +1,15 @@
 package com.carusto.ReactNativePjSip;
 
+import static org.pjsip.pjsua2.pj_constants_.PJ_SUCCESS;
+import static org.pjsip.pjsua2.pjsip_status_code.PJSIP_SC_OK;
+
 import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.pjsip.pjsua2.Account;
+import org.pjsip.pjsua2.OnRegStateParam;
 
 import java.util.List;
 
@@ -36,6 +41,17 @@ public class PjSipBroadcastEmiter {
 
             if (settings != null) {
                 data.put("settings", settings);
+            }
+
+            if (accounts.size() > 0) {
+                PjSipAccount account = accounts.get(0);
+                OnRegStateParam regParam = account.getLastRegStateParam();
+                if (regParam != null) {
+                    JSONObject regInfo = PjSipUtils.mapRegStateToRegInfo(regParam);
+                    if (regInfo != null) {
+                        data.put("regInfo", regInfo);
+                    }
+                }
             }
 
             Intent intent = new Intent();
@@ -84,12 +100,22 @@ public class PjSipBroadcastEmiter {
         context.sendBroadcast(intent);
     }
 
-    public void fireRegistrationChangeEvent(PjSipAccount account) {
+    public void fireRegistrationChangeEvent(PjSipAccount account, OnRegStateParam prm) {
         Intent intent = new Intent();
         intent.setAction(PjActions.EVENT_REGISTRATION_CHANGED);
-        intent.putExtra("data", account.toJsonString());
+        try {
+            JSONObject regInfo = PjSipUtils.mapRegStateToRegInfo(prm);
+            JSONObject dataObject = new JSONObject();
 
-        context.sendBroadcast(intent);
+            dataObject.put("account", account.toJson());
+            dataObject.put("regInfo", regInfo);
+
+            intent.putExtra("data", dataObject.toString());
+
+            context.sendBroadcast(intent);
+        } catch (Exception e) {
+           e.printStackTrace();
+        }
     }
 
     public void fireLaunchStatusUpdateEvent(Boolean isLaunched) {
