@@ -313,7 +313,8 @@ RCT_EXPORT_METHOD(logMessage:(NSDictionary *)message callback:(RCTResponseSender
 
 RCT_EXPORT_METHOD(getLogsFilePathUrl:(RCTResponseSenderBlock)callback) {
     NSURL *url = [PjSipUtil getLogFilePathUrl];
-    callback(@[url.absoluteString]);
+    BOOL success = url != nil;
+    callback(@[@(success), success ? @{ @"url": url.absoluteString } : nil]);
 }
 
 RCT_EXPORT_MODULE();

@@ -44,6 +44,7 @@ public class PjActions {
     public static final String ACTION_DTMF_CALL = "call_dtmf";
 
     public static final String ACTION_SET_SERVICE_CONFIGURATION = "set_service_configuration";
+    public static final String ACTION_GET_LOG_FILE_URL = "get_log_file_url";
 
     public static final String EVENT_STARTED = "com.carusto.account.started";
     public static final String EVENT_ACCOUNT_CREATED = "com.carusto.account.created";
@@ -77,6 +78,14 @@ public class PjActions {
     public static Intent createCheckIfStartedIntent(int callbackId, Context context) {
         Intent intent = new Intent(context, PjSipService.class);
         intent.setAction(PjActions.ACTION_CHECK_IF_STARTED);
+        intent.putExtra("callback_id", callbackId);
+
+        return intent;
+    }
+
+    public static Intent createGetLogsFilePathUrl(int callbackId, Context context) {
+        Intent intent = new Intent(context, PjSipService.class);
+        intent.setAction(PjActions.ACTION_GET_LOG_FILE_URL);
         intent.putExtra("callback_id", callbackId);
 
         return intent;

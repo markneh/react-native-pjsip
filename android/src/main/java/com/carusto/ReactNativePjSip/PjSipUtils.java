@@ -1,11 +1,15 @@
 package com.carusto.ReactNativePjSip;
 
 import static org.pjsip.pjsua2.pj_constants_.PJ_SUCCESS;
+
+import android.content.Context;
+
 import org.json.JSONObject;
 import org.pjsip.pjsua2.OnRegStateParam;
 import org.pjsip.pjsua2.SipHeader;
 import org.pjsip.pjsua2.SipHeaderVector;
 
+import java.io.File;
 import java.util.Map;
 
 public class PjSipUtils {
@@ -35,4 +39,11 @@ public class PjSipUtils {
             return  null;
         }
     }
+
+    public static String getLogsFilePath(Context context) {
+        String filename = "pjsip_log.log";
+        File logFile = new File(context.getFilesDir(), filename);
+        return logFile.getAbsolutePath();
+    }
+
 }

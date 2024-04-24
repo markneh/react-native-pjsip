@@ -1,5 +1,7 @@
 package com.carusto.ReactNativePjSip;
 
+import static org.pjsip.pjsua2.pj_file_access.PJ_O_APPEND;
+
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -52,6 +54,7 @@ import org.pjsip.pjsua2.pjsip_status_code;
 import org.pjsip.pjsua2.pjsip_transport_type_e;
 import org.pjsip.pjsua2.pjsua_state;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -159,8 +162,10 @@ public class PjSipService extends Service {
             // Configure endpoint
             EpConfig epConfig = new EpConfig();
 
-            epConfig.getLogConfig().setLevel(10);
-            epConfig.getLogConfig().setConsoleLevel(10);
+
+            String filename = PjSipUtils.getLogsFilePath(this);
+            epConfig.getLogConfig().setFilename(filename);
+            epConfig.getLogConfig().setFileFlags(PJ_O_APPEND.swigValue());
 
             mLogWriter = new PjSipLogWriter();
             epConfig.getLogConfig().setWriter(mLogWriter);
@@ -434,6 +439,9 @@ public class PjSipService extends Service {
                 handleCallDtmf(intent);
             case PjActions.ACTION_CHANGE_CODEC_SETTINGS:
                 handleChangeCodecSettings(intent);
+                break;
+            case PjActions.ACTION_GET_LOG_FILE_URL:
+                handleGetLogsFileUrl(intent);
                 break;
 
             // Configuration actions
@@ -962,6 +970,18 @@ public class PjSipService extends Service {
 
             mEmitter.fireIntentHandled(intent);
         } catch (Exception e) {
+            mEmitter.fireIntentHandled(intent, e);
+        }
+    }
+
+    private void handleGetLogsFileUrl(Intent intent) {
+        String filename = PjSipUtils.getLogsFilePath(this);
+        try {
+            JSONObject data = new JSONObject();
+            data.put("url", filename);
+            mEmitter.fireIntentHandled(intent, data);
+        } catch (Exception e) {
+            e.printStackTrace();
             mEmitter.fireIntentHandled(intent, e);
         }
     }

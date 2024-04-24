@@ -605,7 +605,8 @@ export default class Endpoint extends EventEmitter {
 
     getLogsFilePathUrl() {
         return new Promise((resolve, reject) => {
-            NativeModules.PjSipModule.getLogsFilePathUrl(url => {
+            NativeModules.PjSipModule.getLogsFilePathUrl((success, data)=> {
+                const url = success && data && data.url;
                 if (url) {
                     resolve(url)
                 } else {
