@@ -159,6 +159,8 @@ public class PjSipService extends Service {
             // Configure endpoint
             EpConfig epConfig = new EpConfig();
 
+            epConfig.getLogConfig().setLevel(5);
+            epConfig.getLogConfig().setConsoleLevel(4);
 
             String filename = PjSipUtils.getLogsFilePath(this);
             epConfig.getLogConfig().setFilename(filename);
