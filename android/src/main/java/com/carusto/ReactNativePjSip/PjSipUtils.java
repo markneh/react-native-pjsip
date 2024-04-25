@@ -32,7 +32,7 @@ public class PjSipUtils {
         try {
             JSONObject regInfo = new JSONObject();
             regInfo.put("success", prm.getStatus() == PJ_SUCCESS.swigValue());
-            regInfo.put("code", prm.getStatus());
+            regInfo.put("code", prm.getCode().swigValue());
             regInfo.put("reason", prm.getReason());
             return regInfo;
         } catch (Exception e) {
