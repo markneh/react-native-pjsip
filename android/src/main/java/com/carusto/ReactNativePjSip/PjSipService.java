@@ -167,10 +167,13 @@ public class PjSipService extends Service {
             mLogWriter = new PjSipLogWriter();
             epConfig.getLogConfig().setWriter(mLogWriter);
 
+
+            if (startIntent != null && startIntent.hasExtra("service")) {
+                mServiceConfiguration = ServiceConfigurationDTO.fromMap((Map) startIntent.getSerializableExtra("service"));
+            }
+
             if (mServiceConfiguration.isUserAgentNotEmpty()) {
                 epConfig.getUaConfig().setUserAgent(mServiceConfiguration.getUserAgent());
-            } else {
-                epConfig.getUaConfig().setUserAgent("React Native PjSip ("+ mEndpoint.libVersion().getFull() +")");
             }
 
             if (mServiceConfiguration.isStunServersNotEmpty()) {
@@ -254,10 +257,6 @@ public class PjSipService extends Service {
     }
 
     private void performInit(Intent intent) {
-        if (intent != null && intent.hasExtra("service")) {
-            mServiceConfiguration = ServiceConfigurationDTO.fromMap((Map) intent.getSerializableExtra("service"));
-        }
-
         mWorkerThread = new HandlerThread(getClass().getSimpleName(), Process.THREAD_PRIORITY_FOREGROUND);
         mWorkerThread.setPriority(Thread.MAX_PRIORITY);
         mWorkerThread.start();
