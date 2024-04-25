@@ -46,15 +46,12 @@ import org.pjsip.pjsua2.StringVector;
 import org.pjsip.pjsua2.TransportConfig;
 import org.pjsip.pjsua2.CodecInfoVector;
 import org.pjsip.pjsua2.CodecInfo;
-import org.pjsip.pjsua2.VideoDevInfo;
 import org.pjsip.pjsua2.pj_qos_type;
-import org.pjsip.pjsua2.pjmedia_orient;
 import org.pjsip.pjsua2.pjsip_inv_state;
 import org.pjsip.pjsua2.pjsip_status_code;
 import org.pjsip.pjsua2.pjsip_transport_type_e;
 import org.pjsip.pjsua2.pjsua_state;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -583,8 +580,6 @@ public class PjSipService extends Service {
         cfg.getRegConfig().setRegisterOnAdd(configuration.isRegOnAdd());
         cfg.getSipConfig().getAuthCreds().add(cred);
 
-        cfg.getVideoConfig().getRateControlBandwidth();
-
         // Registration settings
 
         if (configuration.getContactParams() != null) {
@@ -636,12 +631,6 @@ public class PjSipService extends Service {
         }
 
         cfg.getMediaConfig().getTransportConfig().setQosType(pj_qos_type.PJ_QOS_TYPE_VOICE);
-
-        cfg.getVideoConfig().setAutoShowIncoming(true);
-        cfg.getVideoConfig().setAutoTransmitOutgoing(true);
-
-        int cap_dev = cfg.getVideoConfig().getDefaultCaptureDevice();
-        mEndpoint.vidDevManager().setCaptureOrient(cap_dev, pjmedia_orient.PJMEDIA_ORIENT_ROTATE_270DEG, true);
 
         // -----
 
@@ -699,9 +688,7 @@ public class PjSipService extends Service {
                 if (settingsDTO.getAudioCount() != null) {
                     callSettings.setAudioCount(settingsDTO.getAudioCount());
                 }
-                if (settingsDTO.getVideoCount() != null) {
-                    callSettings.setVideoCount(settingsDTO.getVideoCount());
-                }
+                callSettings.setVideoCount(0);
                 if (settingsDTO.getFlag() != null) {
                     callSettings.setFlag(settingsDTO.getFlag());
                 }
@@ -788,6 +775,8 @@ public class PjSipService extends Service {
             PjSipCall call = findCall(callId);
             CallOpParam prm = new CallOpParam();
             prm.setStatusCode(pjsip_status_code.PJSIP_SC_OK);
+            CallSetting settings = prm.getOpt();
+            settings.setVideoCount(0);
             call.answer(prm);
 
             // Automatically put other calls on hold.

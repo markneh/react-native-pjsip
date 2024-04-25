@@ -3,24 +3,12 @@ package com.carusto.ReactNativePjSip;
 import android.content.Context;
 import android.media.AudioManager;
 import android.util.Log;
-import android.view.View;
-
-import com.google.gson.Gson;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.pjsip.pjsua2.*;
 
-import java.util.HashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-
 public class PjSipCall extends Call {
-
-    public static VideoWindow videoWindow;
-
-    public static VideoPreview videoPreview;
-
-    public static CopyOnWriteArrayList<PjSipVideoMediaChange> mediaListeners = new CopyOnWriteArrayList<>();
 
     private static String TAG = "PjSipCall";
 
@@ -158,58 +146,6 @@ public class PjSipCall extends Call {
         getService().emmitCallStateChanged(this, prm);
     }
 
-    @Override
-    public void onCallMediaEvent(OnCallMediaEventParam prm) {
-        super.onCallMediaEvent(prm);
-
-        // Hack to resize all video windows.
-        for (PjSipVideoMediaChange listener : mediaListeners) {
-            listener.onChange();
-        }
-    }
-
-    @Override
-    public void onCallMediaState(OnCallMediaStateParam prm) {
-        CallInfo info;
-        try {
-            info = getInfo();
-        } catch (Exception exc) {
-            Log.e(TAG, "An error occurs while getting call info", exc);
-            return;
-        }
-
-        for (int i = 0; i < info.getMedia().size(); i++) {
-            Media media = getMedia(i);
-            CallMediaInfo mediaInfo = info.getMedia().get(i);
-
-            if (mediaInfo.getType() == pjmedia_type.PJMEDIA_TYPE_AUDIO
-                    && media != null
-                    && mediaInfo.getStatus() == pjsua_call_media_status.PJSUA_CALL_MEDIA_ACTIVE) {
-                AudioMedia audioMedia = AudioMedia.typecastFromMedia(media);
-
-                // connect the call audio media to sound device
-                try {
-                    AudDevManager mgr = account.getService().getAudDevManager();
-
-                    try {
-                        audioMedia.adjustRxLevel((float) 1.5);
-                        audioMedia.adjustTxLevel((float) 1.5);
-                    } catch (Exception exc) {
-                        Log.e(TAG, "An error while adjusting audio levels", exc);
-                    }
-
-                    audioMedia.startTransmit(mgr.getPlaybackDevMedia());
-                    mgr.getCaptureDevMedia().startTransmit(audioMedia);
-                } catch (Exception exc) {
-                    Log.e(TAG, "An error occurs while connecting audio media to sound device", exc);
-                }
-            }
-        }
-
-        // Emmit changes
-        getService().emmitCallUpdated(this);
-    }
-
     public JSONObject toJson() {
         JSONObject json = new JSONObject();
 
@@ -263,7 +199,6 @@ public class PjSipCall extends Call {
 
             // -----
             json.put("audioCount", info.getSetting().getAudioCount());
-            json.put("videoCount", info.getSetting().getVideoCount());
 
             json.put("media", mediaInfoToJson(info.getMedia()));
             json.put("provisionalMedia", mediaInfoToJson(info.getProvMedia()));
@@ -287,15 +222,10 @@ public class PjSipCall extends Call {
                 JSONObject audioStreamJson = new JSONObject();
                 audioStreamJson.put("confSlot", info.getAudioConfSlot());
 
-                JSONObject videoStreamJson = new JSONObject();
-                videoStreamJson.put("captureDevice", info.getVideoCapDev());
-                videoStreamJson.put("windowId", info.getVideoIncomingWindowId());
-
                 json.put("dir", info.getDir().toString());
                 json.put("type", info.getType().toString());
                 json.put("status", info.getStatus().toString());
                 json.put("audioStream", audioStreamJson);
-                json.put("videoStream", videoStreamJson);
 
                 result.put(json);
             }
