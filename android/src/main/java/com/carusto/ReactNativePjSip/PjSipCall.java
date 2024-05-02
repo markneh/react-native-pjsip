@@ -209,6 +209,48 @@ public class PjSipCall extends Call {
         }
     }
 
+    @Override
+    public void onCallMediaState(OnCallMediaStateParam prm) {
+        CallInfo info;
+        try {
+            info = getInfo();
+        } catch (Exception exc) {
+            Log.e(TAG, "An error occurs while getting call info", exc);
+            return;
+        }
+
+        for (int i = 0; i < info.getMedia().size(); i++) {
+            Media media = getMedia(i);
+            CallMediaInfo mediaInfo = info.getMedia().get(i);
+
+            if (mediaInfo.getType() == pjmedia_type.PJMEDIA_TYPE_AUDIO
+                    && media != null
+                    && mediaInfo.getStatus() == pjsua_call_media_status.PJSUA_CALL_MEDIA_ACTIVE) {
+                AudioMedia audioMedia = AudioMedia.typecastFromMedia(media);
+
+                // connect the call audio media to sound device
+                try {
+                    AudDevManager mgr = account.getService().getAudDevManager();
+
+                    try {
+                        audioMedia.adjustRxLevel((float) 1.5);
+                        audioMedia.adjustTxLevel((float) 1.5);
+                    } catch (Exception exc) {
+                        Log.e(TAG, "An error while adjusting audio levels", exc);
+                    }
+
+                    audioMedia.startTransmit(mgr.getPlaybackDevMedia());
+                    mgr.getCaptureDevMedia().startTransmit(audioMedia);
+                } catch (Exception exc) {
+                    Log.e(TAG, "An error occurs while connecting audio media to sound device", exc);
+                }
+            }
+        }
+
+        // Emmit changes
+        getService().emmitCallUpdated(this);
+    }
+
     private JSONArray mediaInfoToJson(CallMediaInfoVector media) {
         JSONArray result = new JSONArray();
 
