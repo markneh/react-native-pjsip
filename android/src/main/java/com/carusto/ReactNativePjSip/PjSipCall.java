@@ -195,7 +195,6 @@ public class PjSipCall extends Call {
             // -----
             json.put("remoteOfferer", info.getRemOfferer());
             json.put("remoteAudioCount", info.getRemAudioCount());
-            json.put("remoteVideoCount", info.getRemVideoCount());
 
             // -----
             json.put("audioCount", info.getSetting().getAudioCount());

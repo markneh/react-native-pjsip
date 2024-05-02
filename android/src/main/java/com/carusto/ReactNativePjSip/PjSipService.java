@@ -581,6 +581,9 @@ public class PjSipService extends Service {
         cfg.getRegConfig().setRegisterOnAdd(configuration.isRegOnAdd());
         cfg.getSipConfig().getAuthCreds().add(cred);
 
+        cfg.getVideoConfig().setAutoTransmitOutgoing(false);
+        cfg.getVideoConfig().setAutoShowIncoming(false);
+
         // Registration settings
 
         if (configuration.getContactParams() != null) {
@@ -682,25 +685,25 @@ public class PjSipService extends Service {
             // -----
             CallOpParam callOpParam = new CallOpParam(true);
 
+            CallSetting callSettings = new CallSetting();
+            callSettings.setVideoCount(0);
+
             if (settingsJson != null) {
                 CallSettingsDTO settingsDTO = CallSettingsDTO.fromJson(settingsJson);
-                CallSetting callSettings = new CallSetting();
 
                 if (settingsDTO.getAudioCount() != null) {
                     callSettings.setAudioCount(settingsDTO.getAudioCount());
                 }
-                callSettings.setVideoCount(0);
+
                 if (settingsDTO.getFlag() != null) {
                     callSettings.setFlag(settingsDTO.getFlag());
                 }
                 if (settingsDTO.getRequestKeyframeMethod() != null) {
                     callSettings.setReqKeyframeMethod(settingsDTO.getRequestKeyframeMethod());
                 }
-
-                callOpParam.setOpt(callSettings);
-
-                mTrash.add(callSettings);
             }
+
+            mTrash.add(callSettings);
 
             if (messageJson != null) {
                 SipMessageDTO messageDTO = SipMessageDTO.fromJson(messageJson);
