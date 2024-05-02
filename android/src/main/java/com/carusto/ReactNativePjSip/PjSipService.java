@@ -581,6 +581,10 @@ public class PjSipService extends Service {
         cfg.getRegConfig().setRegisterOnAdd(configuration.isRegOnAdd());
         cfg.getSipConfig().getAuthCreds().add(cred);
 
+        cfg.getNatConfig().setUdpKaIntervalSec(0);
+        cfg.getNatConfig().setSdpNatRewriteUse(PJ_FALSE.swigValue());
+        cfg.getNatConfig().setSipStunUse(PJSUA_STUN_RETRY_ON_FAILURE);
+
         cfg.getVideoConfig().setAutoTransmitOutgoing(false);
         cfg.getVideoConfig().setAutoShowIncoming(false);
 
