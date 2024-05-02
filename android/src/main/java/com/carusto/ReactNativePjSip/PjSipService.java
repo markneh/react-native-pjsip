@@ -144,11 +144,8 @@ public class PjSipService extends Service {
             epConfig.getLogConfig().setLevel(5);
             epConfig.getLogConfig().setConsoleLevel(4);
 
-            String filename = PjSipUtils.getLogsFilePath(this);
-            epConfig.getLogConfig().setFilename(filename);
-            epConfig.getLogConfig().setFileFlags(PJ_O_APPEND);
 
-            mLogWriter = new PjSipLogWriter();
+            mLogWriter = new PjSipLogWriter(getApplicationContext());
             epConfig.getLogConfig().setWriter(mLogWriter);
 
 
@@ -955,6 +952,11 @@ public class PjSipService extends Service {
 
     private void handleGetLogsFileUrl(Intent intent) {
         String filename = PjSipUtils.getLogsFilePath(this);
+
+        if (mLogWriter != null) {
+            mLogWriter.flush();
+        }
+
         try {
             JSONObject data = new JSONObject();
             data.put("url", filename);
