@@ -1,11 +1,12 @@
 #!/bin/bash
 set -e
 
-VERSION="2.9.1"
-URL="https://github.com/markneh/react-native-pjsip-builder/releases/download/${VERSION}/release.tar.gz"
+VERSION="2.9.2"
+URL="https://github.com/markneh/react-native-pjsip-builder/releases/download/${VERSION}/$.tar.gz"
 LOCK=".libs.lock"
 DEST=".libs.tar.gz"
 DOWNLOAD=true
+TARGET_PLATFORMS=("ios" "android")
 
 if ! type "curl" > /dev/null; then
     echo "Missed curl dependency" >&2;
@@ -25,9 +26,13 @@ if [ -f ${LOCK} ]; then
 fi
 
 if [ "$DOWNLOAD" = true ]; then
-    curl -L --silent "${URL}" -o "${DEST}"
-    tar -xvf "${DEST}"
-    rm -f "${DEST}"
+	for platform in "${TARGET_PLATFORMS[@]}"
+	do
+		URL="https://github.com/markneh/react-native-pjsip-builder/releases/download/${VERSION}/${platform}.tar.gz"
+        curl -L --silent "${URL}" -o "${platform}${DEST}"
+        tar -xvf "${platform}${DEST}"
+        rm -f "${platform}${DEST}"
+	done
 
     echo "${VERSION}" > ${LOCK}
 fi

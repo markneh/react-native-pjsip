@@ -1,6 +1,9 @@
 package com.carusto.ReactNativePjSip;
 
+import static org.pjsip.pjsua2.pj_constants_.PJ_FALSE;
 import static org.pjsip.pjsua2.pj_file_access.PJ_O_APPEND;
+import static org.pjsip.pjsua2.pjsua_call_flag.PJSUA_CALL_INCLUDE_DISABLED_MEDIA;
+import static org.pjsip.pjsua2.pjsua_stun_use.PJSUA_STUN_RETRY_ON_FAILURE;
 
 import android.app.Service;
 import android.content.BroadcastReceiver;
@@ -35,6 +38,7 @@ import org.pjsip.pjsua2.AudDevManager;
 import org.pjsip.pjsua2.AuthCredInfo;
 import org.pjsip.pjsua2.CallOpParam;
 import org.pjsip.pjsua2.CallSetting;
+import org.pjsip.pjsua2.CodecInfoVector2;
 import org.pjsip.pjsua2.Endpoint;
 import org.pjsip.pjsua2.EpConfig;
 import org.pjsip.pjsua2.OnCallStateParam;
@@ -119,13 +123,6 @@ public class PjSipService extends Service {
 
     private void initEndpoint(Intent startIntent) {
         // Load native libraries
-        try {
-            System.loadLibrary("openh264");
-        } catch (UnsatisfiedLinkError error) {
-            Log.e(TAG, "Error while loading OpenH264 native library", error);
-            handleStart(startIntent, new RuntimeException(error));
-            return;
-        }
 
         try {
             System.loadLibrary("pjsua2");
@@ -139,22 +136,7 @@ public class PjSipService extends Service {
         try {
             mEndpoint = new Endpoint();
             mEndpoint.libCreate();
-            mEndpoint.libRegisterThread(Thread.currentThread().getName());
 
-            // Register main thread
-            Handler uiHandler = new Handler(Looper.getMainLooper());
-            Runnable runnable = new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        mEndpoint.libRegisterThread(Thread.currentThread().getName());
-                    } catch (Exception e) {
-                        // TODO: analyze this - is this critical?
-                        e.printStackTrace();
-                    }
-                }
-            };
-            uiHandler.post(runnable);
 
             // Configure endpoint
             EpConfig epConfig = new EpConfig();
@@ -164,7 +146,7 @@ public class PjSipService extends Service {
 
             String filename = PjSipUtils.getLogsFilePath(this);
             epConfig.getLogConfig().setFilename(filename);
-            epConfig.getLogConfig().setFileFlags(PJ_O_APPEND.swigValue());
+            epConfig.getLogConfig().setFileFlags(PJ_O_APPEND);
 
             mLogWriter = new PjSipLogWriter();
             epConfig.getLogConfig().setWriter(mLogWriter);
@@ -487,7 +469,7 @@ public class PjSipService extends Service {
 
     private JSONObject getCodecsAsJson() {
         try {
-            CodecInfoVector codVect = mEndpoint.codecEnum();
+            CodecInfoVector2 codVect = mEndpoint.codecEnum2();
             JSONObject codecs = new JSONObject();
 
             for(int i=0;i<codVect.size();i++){
@@ -582,7 +564,7 @@ public class PjSipService extends Service {
         cfg.getSipConfig().getAuthCreds().add(cred);
 
         cfg.getNatConfig().setUdpKaIntervalSec(0);
-        cfg.getNatConfig().setSdpNatRewriteUse(PJ_FALSE.swigValue());
+        cfg.getNatConfig().setSdpNatRewriteUse(PJ_FALSE);
         cfg.getNatConfig().setSipStunUse(PJSUA_STUN_RETRY_ON_FAILURE);
 
         cfg.getVideoConfig().setAutoTransmitOutgoing(false);
@@ -1094,14 +1076,14 @@ public class PjSipService extends Service {
     void emmitCallChanged(PjSipCall call, OnCallStateParam prm) {
         try {
             final int callId = call.getId();
-            final pjsip_inv_state callState = call.getInfo().getState();
+            final int callState = call.getInfo().getState();
 
             job(new Runnable() {
                 @Override
                 public void run() {
                     // Acquire wake lock
                     if (mIncallWakeLock == null) {
-                        mIncallWakeLock = mPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "incall");
+                        mIncallWakeLock = mPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "rnvoip:incall");
                     }
                     if (!mIncallWakeLock.isHeld()) {
                         mIncallWakeLock.acquire();

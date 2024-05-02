@@ -31,8 +31,8 @@ public class PjSipUtils {
     public static JSONObject mapRegStateToRegInfo(OnRegStateParam prm) {
         try {
             JSONObject regInfo = new JSONObject();
-            regInfo.put("success", prm.getStatus() == PJ_SUCCESS.swigValue());
-            regInfo.put("code", prm.getCode().swigValue());
+            regInfo.put("success", prm.getStatus() == PJ_SUCCESS);
+            regInfo.put("code", prm.getCode());
             regInfo.put("reason", prm.getReason());
             return regInfo;
         } catch (Exception e) {
