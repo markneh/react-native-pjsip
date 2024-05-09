@@ -13,7 +13,7 @@ Pod::Spec.new do |s|
   s.platform     = :ios, "9.0"
 
   s.source       = { :git => "https://github.com/datso/react-native-pjsip.git" }
-  s.source_files  = "ios/**/*.{h,m}"
+  s.source_files  = "ios/RTCPjSip/*.{h,m}"
 
   s.dependency 'React'
   s.vendored_frameworks = 'ios/libPJSIP.xcframework'
