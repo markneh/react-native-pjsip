@@ -5,5 +5,6 @@ node_modules
 android/src/main/java/org/
 android/src/main/jniLibs/
 ios/VialerPJSIP.framework/
+ios/libPJSIP.xcframework
 .libs.lock
 .libs.tar.gz

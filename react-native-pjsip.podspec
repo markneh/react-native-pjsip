@@ -16,12 +16,9 @@ Pod::Spec.new do |s|
   s.source_files  = "ios/**/*.{h,m}"
 
   s.dependency 'React'
-  s.vendored_frameworks = 'ios/VialerPJSIP.framework'
+  s.vendored_frameworks = 'ios/libPJSIP.xcframework'
   s.xcconfig = {
     'GCC_PREPROCESSOR_DEFINITIONS' => 'PJ_AUTOCONF=1',
-    'USE_HEADERMAP' =>  'NO'    
   }
-  s.pod_target_xcconfig = { 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'arm64' }
-  s.user_target_xcconfig = { 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'arm64' }
 
 end
