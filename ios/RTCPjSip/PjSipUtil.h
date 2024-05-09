@@ -1,4 +1,4 @@
-#import <VialerPJSIP/pjsua.h>
+#import <pjsua.h>
 
 @interface PjSipUtil : NSObject
 

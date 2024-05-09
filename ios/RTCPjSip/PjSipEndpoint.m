@@ -2,7 +2,7 @@
 
 #import <React/RCTBridge.h>
 #import <React/RCTEventDispatcher.h>
-#import <VialerPJSIP/pjsua.h>
+#import <pjsua.h>
 
 #import "PjSipUtil.h"
 #import "PjSipEndpoint.h"

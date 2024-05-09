@@ -1,5 +1,5 @@
 #import <React/RCTUtils.h>
-#import <VialerPJSIP/pjsua.h>
+#import <pjsua.h>
 
 typedef NS_ENUM(NSUInteger, PJSIPCallDeclineReason) {
     PJSIPCallDeclineReasonUnknown = 0,
