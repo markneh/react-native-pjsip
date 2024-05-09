@@ -29,6 +29,16 @@ declare module 'react-native-pjsip' {
     regInfo: RegInfo;
   };
 
+  export enum AndroidCallState {
+    PJSIP_INV_STATE_NULL = 0,
+    PJSIP_INV_STATE_CALLING = 1,
+    PJSIP_INV_STATE_INCOMING = 2,
+    PJSIP_INV_STATE_EARLY = 3,
+    PJSIP_INV_STATE_CONNECTING = 4,
+    PJSIP_INV_STATE_CONFIRMED = 5,
+    PJSIP_INV_STATE_DISCONNECTED = 6,
+  }
+
   export type SipCallState =
     | 'PJSIP_INV_STATE_NULL'
     | 'PJSIP_INV_STATE_CALLING'
@@ -36,7 +46,8 @@ declare module 'react-native-pjsip' {
     | 'PJSIP_INV_STATE_EARLY'
     | 'PJSIP_INV_STATE_CONNECTING'
     | 'PJSIP_INV_STATE_CONFIRMED'
-    | 'PJSIP_INV_STATE_DISCONNECTED';
+    | 'PJSIP_INV_STATE_DISCONNECTED'
+    | AndroidCallState;
 
   export type SipCall = {
     getId(): number;
