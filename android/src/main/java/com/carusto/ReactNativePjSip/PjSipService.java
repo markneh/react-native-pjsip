@@ -417,6 +417,7 @@ public class PjSipService extends Service {
                 break;
             case PjActions.ACTION_DTMF_CALL:
                 handleCallDtmf(intent);
+                break;
             case PjActions.ACTION_CHANGE_CODEC_SETTINGS:
                 handleChangeCodecSettings(intent);
                 break;
