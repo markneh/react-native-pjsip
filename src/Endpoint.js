@@ -111,11 +111,7 @@ export default class Endpoint extends EventEmitter {
     stop() {
         return new Promise(function (resolve, reject) {
             NativeModules.PjSipModule.stop((successful) => {
-                if (successful) {
-                    resolve();
-                } else {
-                    reject();
-                }
+                resolve(successful);
             });
         })
     }
