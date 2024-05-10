@@ -10,6 +10,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
 import android.net.wifi.WifiManager;
 import android.os.Build;
@@ -20,6 +21,8 @@ import android.os.Looper;
 import android.os.PowerManager;
 import android.os.Process;
 import android.os.Bundle;
+import android.telecom.CallAudioState;
+import android.telecom.InCallService;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 
@@ -836,8 +839,7 @@ public class PjSipService extends Service {
 
     private void handleCallUseSpeaker(Intent intent) {
         try {
-            mAudioManager.setSpeakerphoneOn(true);
-            mUseSpeaker = true;
+            setSpeaker(true);
 
             for (PjSipCall call : mCalls) {
                 emmitCallUpdated(call);
@@ -851,8 +853,7 @@ public class PjSipService extends Service {
 
     private void handleCallUseEarpiece(Intent intent) {
         try {
-            mAudioManager.setSpeakerphoneOn(false);
-            mUseSpeaker = false;
+            setSpeaker(false);
 
             for (PjSipCall call : mCalls) {
                 emmitCallUpdated(call);
@@ -1067,6 +1068,10 @@ public class PjSipService extends Service {
         try {
             if (call.getInfo().getState() == pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED) {
                 emmitCallTerminated(call, prm);
+
+                if (mUseSpeaker && mAudioManager.isSpeakerphoneOn()) {
+                    setSpeaker(false);
+                }
             } else {
                 emmitCallChanged(call, prm);
             }
@@ -1196,5 +1201,15 @@ public class PjSipService extends Service {
                 mGSMIdle = true;
             }
         }
+    }
+
+    void setSpeaker(boolean enabled) {
+        if (android.os.Build.VERSION.SDK_INT > android.os.Build.VERSION_CODES.P){
+            int device = enabled ? AudioDeviceInfo.TYPE_BUILTIN_SPEAKER : AudioDeviceInfo.TYPE_BUILTIN_EARPIECE;
+            PjSipUtils.setCommunicationDevice(mAudioManager, device);
+        } else {
+            mAudioManager.setSpeakerphoneOn(enabled);
+        }
+        mUseSpeaker = enabled;
     }
 }
