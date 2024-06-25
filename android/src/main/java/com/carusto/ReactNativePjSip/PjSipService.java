@@ -265,20 +265,21 @@ public class PjSipService extends Service {
 
         Runtime.getRuntime().gc();
 
+        job(() -> {
+            try {
+                destroyEndpoint();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
             Log.d(TAG, "Quiting worker thread safely");
             mWorkerThread.quitSafely();
         }
 
-        try {
-            destroyEndpoint();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
         unregisterReceiver(mPhoneStateChangedReceiver);
 
-        Log.d(TAG, "on destroy was called");
 
         super.onDestroy();
     }
