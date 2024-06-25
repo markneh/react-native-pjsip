@@ -413,7 +413,11 @@ pj_pool_t *pool;
     if (!self.isStarted) {
         return FALSE;
     }
-
+    
+    // cleanup before destroying
+    self.accounts = [[NSMutableDictionary alloc] init];
+    self.calls = [[NSMutableDictionary alloc] init];
+    
     pj_status_t status = pjsua_destroy2(PJSUA_DESTROY_NO_RX_MSG);
 
     BOOL success = status == PJ_SUCCESS;
