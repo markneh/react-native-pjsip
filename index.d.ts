@@ -66,6 +66,7 @@ declare module 'react-native-pjsip' {
     getStateText(): string;
     isMuted(): boolean;
     isSpeaker(): boolean;
+    getLastStatusCode(): string;
   };
 
   export type AccountCredentials = {
