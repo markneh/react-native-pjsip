@@ -137,6 +137,11 @@ public class PjSipService extends Service {
 
         // Start stack
         try {
+
+            // remove all accounts just to be safe
+            mAccounts.clear();
+            Runtime.getRuntime().gc();
+
             mEndpoint = new Endpoint();
             mEndpoint.libCreate();
 
