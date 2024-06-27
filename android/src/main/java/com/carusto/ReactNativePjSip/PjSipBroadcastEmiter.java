@@ -157,10 +157,10 @@ public class PjSipBroadcastEmiter {
         context.sendBroadcast(intent);
     }
 
-    public void fireCallTerminated(PjSipCall call) {
+    public void fireCallTerminated(String callData) {
         Intent intent = new Intent();
         intent.setAction(PjActions.EVENT_CALL_TERMINATED);
-        intent.putExtra("data", call.toJsonString());
+        intent.putExtra("data", callData);
 
         context.sendBroadcast(intent);
     }

@@ -39,6 +39,7 @@ import org.json.JSONObject;
 import org.pjsip.pjsua2.AccountConfig;
 import org.pjsip.pjsua2.AudDevManager;
 import org.pjsip.pjsua2.AuthCredInfo;
+import org.pjsip.pjsua2.CallInfo;
 import org.pjsip.pjsua2.CallOpParam;
 import org.pjsip.pjsua2.CallSetting;
 import org.pjsip.pjsua2.CodecInfoVector2;
@@ -721,6 +722,7 @@ public class PjSipService extends Service {
             }
 
             PjSipCall call = new PjSipCall(account);
+            Log.d(TAG, "will make call");
             call.makeCall(destination, callOpParam);
 
             callOpParam.delete();
@@ -729,6 +731,7 @@ public class PjSipService extends Service {
             doPauseParallelCalls(call);
 
             mCalls.add(call);
+            Log.d(TAG, "will get call info");
             mEmitter.fireIntentHandled(intent, call.toJson());
         } catch (Exception e) {
             mEmitter.fireIntentHandled(intent, e);
@@ -1073,24 +1076,46 @@ public class PjSipService extends Service {
 
     void emmitCallStateChanged(PjSipCall call, OnCallStateParam prm) {
         try {
-            if (call.getInfo().getState() == pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED) {
-                emmitCallTerminated(call, prm);
+            Log.d(TAG, "will get info to check state");
+            CallInfo info = call.getInfo();
+            String callData = call.toJsonString();
+            final int callId = call.getId();
+            boolean isDisconnected = info.getState() == pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED;
 
-                if (mUseSpeaker && mAudioManager.isSpeakerphoneOn()) {
-                    setSpeaker(false);
+
+            job(() -> {
+                try {
+                    if (isDisconnected) {
+                        Log.d(TAG, "will emmit call terminated");
+                        emmitCallTerminated(callId, callData, prm);
+
+                        if (mUseSpeaker && mAudioManager.isSpeakerphoneOn()) {
+                            setSpeaker(false);
+                        }
+                    } else {
+                        emmitCallChanged(call, prm);
+                    }
+                } catch (Exception e) {
+                    Log.w(TAG, "Failed to handle call state event", e);
                 }
-            } else {
-                emmitCallChanged(call, prm);
+            });
+
+            if (isDisconnected) {
+                evict(call);
             }
+
         } catch (Exception e) {
             Log.w(TAG, "Failed to handle call state event", e);
         }
+
     }
 
     void emmitCallChanged(PjSipCall call, OnCallStateParam prm) {
         try {
             final int callId = call.getId();
+            Log.d(TAG, "will get info as call was changed");
             final int callState = call.getInfo().getState();
+            Log.d(TAG, "got info as call was changed");
 
             job(new Runnable() {
                 @Override
@@ -1123,8 +1148,7 @@ public class PjSipService extends Service {
         mEmitter.fireCallChanged(call);
     }
 
-    void emmitCallTerminated(PjSipCall call, OnCallStateParam prm) {
-        final int callId = call.getId();
+    void emmitCallTerminated(int callId, String callData, OnCallStateParam prm) {
 
         job(new Runnable() {
             @Override
@@ -1146,11 +1170,10 @@ public class PjSipService extends Service {
                     mAudioManager.setSpeakerphoneOn(false);
                     mAudioManager.setMode(AudioManager.MODE_NORMAL);
                 }
+
+                mEmitter.fireCallTerminated(callData);
             }
         });
-
-        mEmitter.fireCallTerminated(call);
-        evict(call);
     }
 
     void emmitCallUpdated(PjSipCall call) {
