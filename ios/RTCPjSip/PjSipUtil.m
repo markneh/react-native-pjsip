@@ -274,7 +274,7 @@
 }
 
 + (void)logPjMessage:(NSString *)type content:(NSString *)text {
-    PJ_LOG(4, ([type UTF8String], [text UTF8String]));
+    [self appendLogMessage:[NSString stringWithFormat:@"%@\n", text]];
 }
 
 
