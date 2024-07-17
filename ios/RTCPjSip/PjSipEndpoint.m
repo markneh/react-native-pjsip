@@ -427,8 +427,6 @@ pj_pool_t *pool;
         [self emmitLaunchStatusUpdate:false];
     }
 
-    [self emmitLaunchStatusUpdate:success];
-
     return success;
 }
 
