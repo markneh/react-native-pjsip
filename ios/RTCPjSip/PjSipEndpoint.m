@@ -492,6 +492,13 @@ pj_pool_t *pool;
     pj_str_t callDest = pj_str((char *) [destination UTF8String]);
 
     [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayAndRecord error:nil];
+    
+    NSError *activationError;
+    [[AVAudioSession sharedInstance] setActive:YES error:&activationError];
+    
+    if (activationError) {
+        [NSException raise:@"Failed to make a call" format:@"Error while trying to activate AVAudioSession: %@", activationError];
+    }
 
     pj_status_t status = pjsua_call_make_call(account.id, &callDest, &callSettings, NULL, &msgData, &callId);
 
