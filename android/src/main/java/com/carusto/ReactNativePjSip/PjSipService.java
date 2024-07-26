@@ -51,6 +51,9 @@ import org.pjsip.pjsua2.SipHeader;
 import org.pjsip.pjsua2.SipHeaderVector;
 import org.pjsip.pjsua2.SipTxOption;
 import org.pjsip.pjsua2.StringVector;
+import org.pjsip.pjsua2.ToneDigit;
+import org.pjsip.pjsua2.ToneDigitVector;
+import org.pjsip.pjsua2.ToneGenerator;
 import org.pjsip.pjsua2.TransportConfig;
 import org.pjsip.pjsua2.CodecInfoVector;
 import org.pjsip.pjsua2.CodecInfo;
@@ -82,6 +85,8 @@ public class PjSipService extends Service {
     private int mTcpTransportId;
 
     private int mTlsTransportId;
+
+    private ToneGenerator mToneGenerator;
 
     private ServiceConfigurationDTO mServiceConfiguration = new ServiceConfigurationDTO();
 
@@ -931,6 +936,25 @@ public class PjSipService extends Service {
             call.dialDtmf(digits);
 
             mEmitter.fireIntentHandled(intent);
+
+            if (mToneGenerator == null) {
+                mToneGenerator = new ToneGenerator();
+                mToneGenerator.createToneGenerator();
+            }
+
+            if (digits != null) {
+                ToneDigitVector digitsVector = new ToneDigitVector();
+                ToneDigit digit = new ToneDigit();
+                char digitChar = digits.charAt(0);
+                digit.setDigit(digitChar);
+                digit.setVolume((short)0);
+                digit.setOn_msec((short)100);
+                digit.setOff_msec((short)500);
+                digitsVector.add(digit);
+                mToneGenerator.playDigits(digitsVector);
+                mToneGenerator.startTransmit(mEndpoint.audDevManager().getPlaybackDevMedia());
+            }
+
         } catch (Exception e) {
             mEmitter.fireIntentHandled(intent, e);
         }
