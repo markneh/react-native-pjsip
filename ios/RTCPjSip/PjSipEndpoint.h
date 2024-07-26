@@ -49,4 +49,5 @@ typedef void (^SIPEventCallback)(NSString *name, id metadata);
 
 - (BOOL)relaunchUDPConnection;
 
+-(void)playDTMFDigitsAudioFeedback:(NSString *)digitsString;
 @end

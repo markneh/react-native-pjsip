@@ -81,7 +81,9 @@ static pjsip_module mod_default_handler =
 
 pj_bool_t ringback_on;
 int ringback_slot;
+pjsua_conf_port_id dtmf_port_id;
 pjmedia_port *ringback_port;
+pjmedia_port *dtmf_port;
 pj_pool_t *pool;
 
 + (instancetype) instance {
@@ -468,6 +470,54 @@ pj_pool_t *pool;
     return self.accounts[@(accountId)];
 }
 
+- (void)playDTMFDigitsAudioFeedback:(NSString *)digitsString {
+    char *digits = (char *)[digitsString cStringUsingEncoding:NSUTF8StringEncoding];
+    
+    [self initDTMFIfNeeded];
+   
+    pjmedia_tone_digit d[1];
+    d[0].digit = digits[0];
+    d[0].on_msec = 100;
+    d[0].off_msec = 500;
+    d[0].volume = 0;
+    
+    pjmedia_tonegen_play_digits(dtmf_port, 1, d, 0);
+}
+
+- (BOOL)initDTMFIfNeeded {
+    
+    if (!dtmf_port) {
+        // create dtmf tonegen
+        pj_status_t status = pjmedia_tonegen_create(pool, 8000, 1, 160, 16, 0, &dtmf_port);
+        if (status != PJ_SUCCESS) {
+            [self logStatus:status];
+            return NO;
+        }
+            
+        // add dtmf port
+        status = pjsua_conf_add_port(pool, dtmf_port, &dtmf_port_id);
+        if (status != PJ_SUCCESS) {
+            [self logStatus:status]; // not critical
+            return NO;
+        }
+    }
+    
+    if (dtmf_port_id != PJSUA_INVALID_ID) {
+        pjsua_conf_connect(dtmf_port_id, 0);
+    }
+    
+    return YES;
+}
+
+- (void)deinitDTMFTonegenIfNeeded {
+    if (dtmf_port_id) {
+        pjsua_conf_remove_port(dtmf_port_id);
+    }
+    if (dtmf_port) {
+        pjmedia_port_destroy(dtmf_port);
+        dtmf_port = NULL;
+    }
+}
 
 #pragma mark Calls
 
@@ -733,6 +783,7 @@ static void onCallStateChanged(pjsua_call_id callId, pjsip_event *event) {
         [endpoint.calls removeObjectForKey:@(callId)];
         [endpoint emmitCallTerminated:call];
         [endpoint resetSpeaker]; // this might be triggered if there's another incoming call which is automatically declined
+        [endpoint deinitDTMFTonegenIfNeeded];
     } else {
         [endpoint emmitCallChanged:call];
     }

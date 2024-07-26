@@ -263,6 +263,7 @@ RCT_EXPORT_METHOD(dtmfCall: (int) callId digits: (NSString *) digits callback:(R
 
     if (call) {
         [call dtmf:digits];
+        [[PjSipEndpoint instance] playDTMFDigitsAudioFeedback:digits];
         callback(@[@TRUE]);
     } else {
         callback(@[@FALSE, @"Call not found"]);
