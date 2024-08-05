@@ -16,6 +16,7 @@ declare module 'react-native-pjsip' {
     getRegistration(): Registration;
     getURI(): string;
     getUsername(): string;
+    getContactUriParams(): string;
   };
 
   export type RegInfo = {
