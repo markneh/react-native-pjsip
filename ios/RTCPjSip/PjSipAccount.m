@@ -162,6 +162,21 @@
     return status == PJ_SUCCESS;
 }
 
+- (BOOL)updateContactUriParams:(NSString *)newParams {
+    self.contactUriParams = newParams ? newParams : @"";
+
+    pj_pool_t *tmp_pool = pjsua_pool_create("tmp-pjsua", 1000, 1000);
+    pjsua_acc_config config;
+    pjsua_acc_get_config(self.id, tmp_pool, &config);
+    
+    config.contact_uri_params = pj_str((char *) [self.contactUriParams UTF8String]);
+
+    pj_status_t status = pjsua_acc_modify(self.id, &config);
+    pj_pool_release(tmp_pool);
+
+    return status == PJ_SUCCESS;
+}
+
 - (void) dealloc {
     pjsua_acc_set_registration(self.id, PJ_FALSE);
     pjsua_acc_del(self.id);

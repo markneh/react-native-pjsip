@@ -33,5 +33,7 @@
 - (NSDictionary *)toJsonDictionary;
 
 - (BOOL)updateCredentials:(NSDictionary *)credentials;
+- (BOOL)updateContactUriParams:(NSString *)newParams;
+
 
 @end

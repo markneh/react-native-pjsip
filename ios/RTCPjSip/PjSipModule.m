@@ -89,6 +89,25 @@ RCT_EXPORT_METHOD(updateAccount: (int)accountId
     }
 }
 
+RCT_EXPORT_METHOD(updateAccountContactUriParams:(int)accountId
+                  params:(NSString *)params
+                  callback:(RCTResponseSenderBlock) callback) {
+    @try {
+        PjSipEndpoint *endpoint = [PjSipEndpoint instance];
+        PjSipAccount *account = [endpoint findAccount:accountId];
+
+        if (!account) {
+            callback(@[@FALSE, @"User was not found"]);
+        } else {
+            BOOL result = [account updateContactUriParams:params];
+            callback(@[@(result)]);
+        }
+    } @catch (NSException *exception) {
+        callback(@[@FALSE, @"User was not found"]);
+    }
+}
+
+
 RCT_EXPORT_METHOD(deleteAccount: (int) accountId callback:(RCTResponseSenderBlock) callback) {
     [[PjSipEndpoint instance] deleteAccount:accountId];
     callback(@[@TRUE]);

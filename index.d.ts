@@ -123,6 +123,10 @@ declare module 'react-native-pjsip' {
       account: Account,
       credentials: AccountCredentials,
     ): Promise<unknown>;
+    updateAccountContactUriParams(
+      account: Account,
+      params: string,
+    ): Promise<boolean>;
     deleteAccount(account: Account): Promise<unknown>;
     makeCall(account: Account, destination: string): Promise<SipCall>;
     dtmfCall(call: SipCall, digits: string): Promise<boolean>;
