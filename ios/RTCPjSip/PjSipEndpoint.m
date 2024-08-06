@@ -23,6 +23,20 @@
 #define RING_CNT        3
 #define RING_INTERVAL        3000
 
+static NSString * const PjSipEndpointErrorDomain = @"com.react.native.pjsip";
+static NSString * const PjSipEndpointErrorStatusKey = @"pjsip.status.key";
+
+typedef NS_ENUM(NSInteger, PjSipEndpointErrorCode) {
+    PjSipEndpointAlreadyLaunchedError = 1001,
+    PjSipEndpointCreateError = 1002,
+    PjSipEndpointRegModuleError = 1003,
+    PjSipEndpointInitError = 1004,
+    PjSipEndpointToneGenCreateError = 1005,
+    PjSipEndpointToneGenAddPortError = 1006,
+    PjSipEndpointUDPCreateError = 1007,
+    PjSipEndpointStartError = 1008
+};
+
 static pj_status_t on_tx_response(pjsip_tx_data *tdata)
 {
     NSString *method = [PjSipUtil toString:&tdata->msg->line.req.method.name];
@@ -109,21 +123,24 @@ pj_pool_t *pool;
     pj_pool_release(pool);
 }
 
-- (BOOL)startWithConfig:(NSDictionary *)config {
+- (BOOL)startWithConfig:(NSDictionary *)config error:(NSError **)startError {
 
     pjsua_state state = pjsua_get_state();
     if (state != PJSUA_STATE_NULL) {
+        *startError = [NSError errorWithDomain:PjSipEndpointErrorDomain
+                                          code:PjSipEndpointAlreadyLaunchedError
+                                     userInfo:nil];
         return FALSE;
     }
 
-    BOOL success = [self performStartWithConfig:config];
+    BOOL success = [self performStartWithConfig:config error:startError];
 
     [self emmitLaunchStatusUpdate:success];
 
     return success;
 }
 
-- (BOOL)performStartWithConfig:(NSDictionary *)config {
+- (BOOL)performStartWithConfig:(NSDictionary *)config error:(NSError **)startError {
 
     self.accounts = [[NSMutableDictionary alloc] initWithCapacity:12];
     self.calls = [[NSMutableDictionary alloc] initWithCapacity:12];
@@ -134,12 +151,14 @@ pj_pool_t *pool;
     status = pjsua_create();
     if (status != PJ_SUCCESS) {
         [self logStatus:status];
+        *startError = [self errorFromStatus:status code:PjSipEndpointCreateError];
         return false;
     }
 
     status = pjsip_endpt_register_module(pjsua_get_pjsip_endpt(), &mod_default_handler);
     if (status != PJ_SUCCESS) {
         [self logStatus:status];
+        *startError = [self errorFromStatus:status code:PjSipEndpointRegModuleError];
         return false;
     }
 
@@ -185,6 +204,7 @@ pj_pool_t *pool;
         status = pjsua_init(&cfg, &log_cfg, &mediaConfig);
         if (status != PJ_SUCCESS) {
             [self logStatus:status];
+            *startError = [self errorFromStatus:status code:PjSipEndpointInitError];
             return FALSE;
         }
 
@@ -208,6 +228,7 @@ pj_pool_t *pool;
 
         if (status != PJ_SUCCESS) {
             [self logStatus:status];
+            *startError = [self errorFromStatus:status code:PjSipEndpointToneGenCreateError];
             return NO;
         }
 
@@ -226,6 +247,7 @@ pj_pool_t *pool;
 
         if (status != PJ_SUCCESS) {
             [self logStatus:status];
+            *startError = [self errorFromStatus:status code:PjSipEndpointToneGenAddPortError];
             return NO;
         }
 
@@ -243,6 +265,7 @@ pj_pool_t *pool;
 
         if (status != PJ_SUCCESS) {
             [self logStatus:status];
+            *startError = [self errorFromStatus:status code:PjSipEndpointUDPCreateError];
             return NO;
         } else {
             self.udpTransportId = id;
@@ -283,6 +306,7 @@ pj_pool_t *pool;
     status = pjsua_start();
     if (status != PJ_SUCCESS) {
         [self logStatus:status];
+        *startError = [self errorFromStatus:status code:PjSipEndpointStartError];
         return FALSE;
     }
 
@@ -362,6 +386,20 @@ pj_pool_t *pool;
     NSString *errorMessage = [self errorMessageFromStatus:status];
     [self emmitLogMessage:errorMessage];
 }
+
+- (NSError *)errorFromStatus:(pj_status_t)status code:(NSInteger)errorCode {
+    return [self errorFromStatus:status code:errorCode userInfo:nil];
+}
+
+- (NSError *)errorFromStatus:(pj_status_t)status code:(NSInteger)errorCode userInfo:(NSDictionary *)providedUserInfo {
+    NSMutableDictionary *userInfo = [[NSMutableDictionary alloc] init];
+    userInfo[PjSipEndpointErrorStatusKey] = [self errorMessageFromStatus:status];
+    
+    if (providedUserInfo) {
+        [userInfo addEntriesFromDictionary:providedUserInfo];
+    }
+    
+    return [NSError errorWithDomain:PjSipEndpointErrorDomain code:errorCode userInfo:userInfo]; }
 
 - (NSString *)errorMessageFromStatus:(pj_status_t)status {
     char errmsg[PJ_ERR_MSG_SIZE];

@@ -23,7 +23,7 @@ typedef void (^SIPEventCallback)(NSString *name, id metadata);
 +(instancetype)instance;
 +(instancetype)instanceWithConfig:(NSDictionary *)config;
 
--(BOOL)startWithConfig:(NSDictionary *)config;
+-(BOOL)startWithConfig:(NSDictionary *)config error:(NSError **)startError;
 -(NSDictionary *)getInitialState: (NSDictionary *)config;
 -(BOOL)stop;
 

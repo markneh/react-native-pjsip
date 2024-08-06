@@ -39,10 +39,16 @@ RCT_EXPORT_METHOD(start: (NSDictionary *) config callback: (RCTResponseSenderBlo
         callback(@[@(YES), initialState]);
         return;
     }
-
-    BOOL success = [[PjSipEndpoint instance] startWithConfig:config];
-    NSDictionary *initialState = [[PjSipEndpoint instance] getInitialState:config];
-    callback(@[@(success), initialState]);
+    
+    NSError *startError;
+    BOOL success = [[PjSipEndpoint instance] startWithConfig:config error:&startError];
+    
+    if (!success) {
+        callback(@[@(success), startError]);
+    } else {
+        NSDictionary *initialState = [[PjSipEndpoint instance] getInitialState:config];
+        callback(@[@(success), initialState]);
+    }
 }
 
 RCT_EXPORT_METHOD(stop: (RCTResponseSenderBlock)callback) {
