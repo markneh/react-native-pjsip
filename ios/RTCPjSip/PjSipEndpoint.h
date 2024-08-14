@@ -5,6 +5,14 @@
 
 typedef void (^SIPEventCallback)(NSString *name, id metadata);
 
+extern NSString * const PjSipEndpointRegistrationEventName;
+extern NSString * const PjSipEndpointCallReceiveEventName;
+extern NSString * const PjSipEndpointCallChangeEventName;
+extern NSString * const PjSipEndpointCallTerminationEventName;
+extern NSString * const PjSipEndpointMessageReceiveEventName;
+extern NSString * const PjSipEndpointLogEventName;
+extern NSString * const PjSipEndpointLaunchStatusEventName;
+
 @interface PjSipEndpoint : NSObject
 
 @property (nonatomic, assign, readonly) BOOL isStarted;

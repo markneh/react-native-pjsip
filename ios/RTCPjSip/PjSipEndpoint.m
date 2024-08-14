@@ -26,6 +26,14 @@
 static NSString * const PjSipEndpointErrorDomain = @"com.react.native.pjsip";
 static NSString * const PjSipEndpointErrorStatusKey = @"pjsip.status.key";
 
+NSString * const PjSipEndpointRegistrationEventName = @"pjSipRegistrationChanged";
+NSString * const PjSipEndpointCallReceiveEventName = @"pjSipCallReceived";
+NSString * const PjSipEndpointCallChangeEventName = @"pjSipCallChanged";
+NSString * const PjSipEndpointCallTerminationEventName = @"pjSipCallTerminated";
+NSString * const PjSipEndpointMessageReceiveEventName = @"pjSipMessageReceived";
+NSString * const PjSipEndpointLogEventName = @"pjSipLogReceived";
+NSString * const PjSipEndpointLaunchStatusEventName = @"pjSipLaunchStatusUpdated";
+
 typedef NS_ENUM(NSInteger, PjSipEndpointErrorCode) {
     PjSipEndpointAlreadyLaunchedError = 1001,
     PjSipEndpointCreateError = 1002,
@@ -692,31 +700,31 @@ pj_pool_t *pool;
     
     self.lastRegInfo = regInfo;
 
-    [self emmitEvent:@"pjSipRegistrationChanged" body:body];
+    [self emmitEvent:PjSipEndpointRegistrationEventName body:body];
 }
 
 -(void)emmitCallReceived:(PjSipCall*) call {
-    [self emmitEvent:@"pjSipCallReceived" body:[call toJsonDictionary:self.isSpeaker]];
+    [self emmitEvent:PjSipEndpointCallReceiveEventName body:[call toJsonDictionary:self.isSpeaker]];
 }
 
 -(void)emmitCallChanged:(PjSipCall*) call {
-    [self emmitEvent:@"pjSipCallChanged" body:[call toJsonDictionary:self.isSpeaker]];
+    [self emmitEvent:PjSipEndpointCallChangeEventName body:[call toJsonDictionary:self.isSpeaker]];
 }
 
 -(void)emmitCallTerminated:(PjSipCall*) call {
-    [self emmitEvent:@"pjSipCallTerminated" body:[call toJsonDictionary:self.isSpeaker]];
+    [self emmitEvent:PjSipEndpointCallTerminationEventName body:[call toJsonDictionary:self.isSpeaker]];
 }
 
 -(void)emmitMessageReceived:(PjSipMessage*) message {
-    [self emmitEvent:@"pjSipMessageReceived" body:[message toJsonDictionary]];
+    [self emmitEvent:PjSipEndpointMessageReceiveEventName body:[message toJsonDictionary]];
 }
 
 -(void)emmitLogMessage:(NSString *)message {
-    [self emmitEvent:@"pjSipLogReceived" body:message];
+    [self emmitEvent:PjSipEndpointLogEventName body:message];
 }
 
 -(void)emmitLaunchStatusUpdate:(BOOL)isLaunched {
-    [self emmitEvent:@"pjSipLaunchStatusUpdated" body:@{@"isLaunched":@(isLaunched)}];
+    [self emmitEvent:PjSipEndpointLaunchStatusEventName body:@{@"isLaunched":@(isLaunched)}];
 }
 
 -(void)emmitEvent:(NSString*) name body:(id)body {
