@@ -680,6 +680,10 @@ pj_pool_t *pool;
     pjsua_codec_info codec[32];
     NSMutableDictionary *codecs = [[NSMutableDictionary alloc] initWithCapacity:32];
     unsigned uCount = 32;
+    
+    if (codecs.allKeys.count == 0) {
+        return codecs;
+    }
 
     if (pjsua_enum_codecs(codec, &uCount) == PJ_SUCCESS) {
         for (unsigned i = 0; i < uCount; ++i) {
