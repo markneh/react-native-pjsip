@@ -42,7 +42,9 @@ typedef NS_ENUM(NSInteger, PjSipEndpointErrorCode) {
     PjSipEndpointToneGenCreateError = 1005,
     PjSipEndpointToneGenAddPortError = 1006,
     PjSipEndpointUDPCreateError = 1007,
-    PjSipEndpointStartError = 1008
+    PjSipEndpointStartError = 1008,
+    PjSipEndpointAudioActivateError = 1009,
+    PjSipEndpointAudioDeactivateError = 1010
 };
 
 static pj_status_t on_tx_response(pjsip_tx_data *tdata)
@@ -528,6 +530,28 @@ pj_pool_t *pool;
     d[0].volume = 0;
     
     pjmedia_tonegen_play_digits(dtmf_port, 1, d, 0);
+}
+
+- (BOOL)activateAudioSessionWithError:(NSError *__autoreleasing *)error {
+    pjsua_set_no_snd_dev();
+    pj_status_t status;
+    status = pjsua_set_snd_dev(PJMEDIA_AUD_DEFAULT_CAPTURE_DEV, PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV);
+    
+    if (status != PJ_SUCCESS) {
+        *error = [self errorFromStatus:status code:PjSipEndpointAudioActivateError];
+        [self logStatus:status];
+    }
+    return status == PJ_SUCCESS;
+}
+
+- (BOOL)deactivateAudioSessionWithError:(NSError *__autoreleasing *)error {
+    @try {
+        pjsua_set_no_snd_dev();
+        return YES;
+    } @catch (NSException *exception) {
+        *error = [self errorFromStatus:PJ_FALSE code:PjSipEndpointAudioDeactivateError userInfo:@{ @"exception" : exception }];
+        return NO;
+    }
 }
 
 - (BOOL)initDTMFIfNeeded {

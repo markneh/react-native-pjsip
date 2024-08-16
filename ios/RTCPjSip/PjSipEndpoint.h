@@ -58,4 +58,7 @@ extern NSString * const PjSipEndpointLaunchStatusEventName;
 - (BOOL)relaunchUDPConnection;
 
 -(void)playDTMFDigitsAudioFeedback:(NSString *)digitsString;
+- (BOOL)activateAudioSessionWithError:(NSError **)error;
+- (BOOL)deactivateAudioSessionWithError:(NSError **)error;
+
 @end
