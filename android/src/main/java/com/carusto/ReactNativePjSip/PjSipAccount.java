@@ -77,7 +77,27 @@ public class PjSipAccount extends Account {
     @Override
     public void onIncomingCall(OnIncomingCallParam prm) {
         PjSipCall call = new PjSipCall(this, prm.getCallId());
+        String xCallId = extractXCallId(prm);
+        call.setxCallId(xCallId);
         service.emmitCallReceived(this, call);
+    }
+
+    private String extractXCallId(OnIncomingCallParam prm) {
+        try {
+            String sipMessage = prm.getRdata().getWholeMsg();
+            String[] lines = sipMessage.split("\\r?\\n");
+            String headerPrefix = "X-UUID:";
+
+            for (String line : lines) {
+                if (line.startsWith(headerPrefix)) {
+                    return line.substring(headerPrefix.length()).trim();
+                }
+            }
+
+            return "";
+        } catch (Exception e) {
+            return "";
+        }
     }
 
     @Override

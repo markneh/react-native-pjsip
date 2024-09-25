@@ -18,6 +18,8 @@ public class PjSipCall extends Call {
 
     private boolean isMuted = false;
 
+    private String xCallId = "";
+
     public PjSipCall(PjSipAccount acc, int call_id) {
         super(acc, call_id);
         this.account = acc;
@@ -30,6 +32,10 @@ public class PjSipCall extends Call {
 
     public PjSipService getService() {
         return account.getService();
+    }
+
+    public void setxCallId(String xCallId) {
+        this.xCallId = xCallId;
     }
 
     public void hold() throws Exception {
@@ -167,6 +173,7 @@ public class PjSipCall extends Call {
             // -----
             json.put("id", getId());
             json.put("callId", info.getCallIdString());
+            json.put("xCallId", this.xCallId);
             json.put("accountId", account.getId());
 
             // -----
