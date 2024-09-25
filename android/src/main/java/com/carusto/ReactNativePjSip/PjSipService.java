@@ -206,6 +206,7 @@ public class PjSipService extends Service {
             }
 
             mEndpoint.libStart();
+            mEndpoint.libRegisterThread(Thread.currentThread().getName());
             handleStart(startIntent, null);
             emmitLaunchStatusUpdateEvent();
         } catch (Exception e) {
