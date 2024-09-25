@@ -157,11 +157,11 @@ public class PjActions {
         return intent;
     }
 
-    public static Intent createDeclineCallIntent(int callbackId, int callId, Context context) {
+    public static Intent createDeclineCallIntent(int callbackId, ReadableMap callSettings, Context context) {
         Intent intent = new Intent(context, PjSipService.class);
         intent.setAction(PjActions.ACTION_DECLINE_CALL);
         intent.putExtra("callback_id", callbackId);
-        intent.putExtra("call_id", callId);
+        formatIntent(intent, callSettings);
 
         return intent;
     }

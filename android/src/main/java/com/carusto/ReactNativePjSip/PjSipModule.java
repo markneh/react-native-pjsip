@@ -127,9 +127,9 @@ public class PjSipModule extends ReactContextBaseJavaModule {
 
     // TODO: update intCallId to params
     @ReactMethod
-    public void declineCall(int callId, Callback callback) {
+    public void declineCall(ReadableMap callSettings, Callback callback) {
         int callbackId = receiver.register(callback);
-        Intent intent = PjActions.createDeclineCallIntent(callbackId, callId, getReactApplicationContext());
+        Intent intent = PjActions.createDeclineCallIntent(callbackId, callSettings, getReactApplicationContext());
         start(intent);
     }
 

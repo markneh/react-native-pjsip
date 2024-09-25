@@ -1,5 +1,9 @@
-import React, {DeviceEventEmitter, NativeModules} from 'react-native';
-import {EventEmitter} from 'events'
+import React, {
+  DeviceEventEmitter,
+  NativeModules,
+  Platform,
+} from 'react-native';
+import { EventEmitter } from 'events';
 
 import Call from './Call'
 import Message from './Message'
@@ -350,8 +354,9 @@ export default class Endpoint extends EventEmitter {
     }
 
     declineCallWithReason(call, reason) {
+        const key = Platform.OS === 'android' ? 'call_id' : 'callId';
         return new Promise((resolve, reject) => {
-            NativeModules.PjSipModule.declineCall({ callId: call.getId(), reason }, (successful, data) => {
+            NativeModules.PjSipModule.declineCall({ [key]: call.getId(), reason }, (successful, data) => {
                 if (successful) {
                     resolve(data);
                 } else {
