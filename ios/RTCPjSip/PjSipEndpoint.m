@@ -541,6 +541,28 @@ pj_pool_t *pool;
         *error = [self errorFromStatus:status code:PjSipEndpointAudioActivateError];
         [self logStatus:status];
     }
+    
+    pjsua_call_info call_info;
+    pjsua_call_id ids[PJSUA_MAX_CALLS];
+    unsigned count = PJSUA_MAX_CALLS;
+    
+    pjsua_enum_calls(ids, &count);
+    for (unsigned i = 0; i < count; i++) {
+        pjsua_call_get_info(i, &call_info);
+        
+        for (unsigned mi = 0; mi < call_info.media_cnt; ++mi) {
+            if (call_info.media[mi].type == PJMEDIA_TYPE_AUDIO &&
+                (call_info.media[mi].status == PJSUA_CALL_MEDIA_ACTIVE ||
+                 call_info.media[mi].status == PJSUA_CALL_MEDIA_REMOTE_HOLD))
+            {
+                pjsua_conf_port_id call_conf_slot;
+                call_conf_slot = call_info.media[mi].stream.aud.conf_slot;
+                pjsua_conf_connect(0, call_conf_slot);
+                pjsua_conf_connect(call_conf_slot, 0);
+            }
+        }
+    }
+    
     return status == PJ_SUCCESS;
 }
 
