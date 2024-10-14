@@ -72,80 +72,36 @@ RCT_EXPORT_METHOD(updateStunServers: (int) accountId stunServerList:(NSArray *) 
 
 #pragma mark - Account Actions
 
-RCT_EXPORT_METHOD(createAccount: (NSDictionary *) config callback:(RCTResponseSenderBlock) callback) {
-    PjSipAccount *account = [[PjSipEndpoint instance] createAccount:config];
-    callback(@[@TRUE, [account toJsonDictionary]]);
+RCT_EXPORT_METHOD(setAccountCreds:(NSDictionary *)creds callback:(RCTResponseSenderBlock) callback) {
+    [[PjSipEndpoint instance] setAccountCreds:creds];
 }
 
-RCT_EXPORT_METHOD(updateAccount: (int)accountId
-                  withCredentials: (NSDictionary *)credentials
-                  callback:(RCTResponseSenderBlock) callback) {
-    @try {
-        PjSipEndpoint *endpoint = [PjSipEndpoint instance];
-        PjSipAccount *account = [endpoint findAccount:accountId];
-
-        if (!account) {
-            callback(@[@FALSE, @"User was not found"]);
-        } else {
-            BOOL result = [account updateCredentials:credentials];
-            callback(@[@(result)]);
-        }
-    } @catch (NSException *exception) {
-        callback(@[@FALSE, @"User was not found"]);
-    }
+RCT_EXPORT_METHOD(registerExistingAccountIfNeeded:(RCTResponseSenderBlock) callback) {
+    [[PjSipEndpoint instance] registerExistingAccountIfNeeded];
 }
 
-RCT_EXPORT_METHOD(updateAccountContactUriParams:(int)accountId
-                  params:(NSString *)params
-                  callback:(RCTResponseSenderBlock) callback) {
-    @try {
-        PjSipEndpoint *endpoint = [PjSipEndpoint instance];
-        PjSipAccount *account = [endpoint findAccount:accountId];
-
-        if (!account) {
-            callback(@[@FALSE, @"User was not found"]);
-        } else {
-            BOOL result = [account updateContactUriParams:params];
-            callback(@[@(result)]);
-        }
-    } @catch (NSException *exception) {
-        callback(@[@FALSE, @"User was not found"]);
-    }
-}
-
-
-RCT_EXPORT_METHOD(deleteAccount: (int) accountId callback:(RCTResponseSenderBlock) callback) {
-    [[PjSipEndpoint instance] deleteAccount:accountId];
-    callback(@[@TRUE]);
-}
-
-RCT_EXPORT_METHOD(registerAccount: (int) accountId renew:(BOOL) renew callback:(RCTResponseSenderBlock) callback) {
-    @try {
-        PjSipEndpoint* endpoint = [PjSipEndpoint instance];
-        PjSipAccount *account = [endpoint findAccount:accountId];
-
-        [account register:renew];
-
-        callback(@[@TRUE]);
-    }
-    @catch (NSException * e) {
-        callback(@[@FALSE, e.reason]);
+RCT_EXPORT_METHOD(getCurrentAccount:(RCTResponseSenderBlock)callback) {
+    PjSipAccount *currentAccount = [[PjSipEndpoint instance] getCurrentAccount];
+    
+    if (currentAccount) {
+        callback(@[@YES, [currentAccount toJsonDictionary]]);
+    } else {
+        callback(@[@NO, @"No account was added"]);
     }
 }
 
 #pragma mark - Call Actions
 
-RCT_EXPORT_METHOD(makeCall: (int) accountId destination: (NSString *) destination callSettings:(NSDictionary*) callSettings msgData:(NSDictionary*) msgData callback:(RCTResponseSenderBlock) callback) {
+RCT_EXPORT_METHOD(makeCallToDestination: (NSString *) destination callSettings:(NSDictionary*) callSettings msgData:(NSDictionary*) msgData callback:(RCTResponseSenderBlock) callback) {
     @try {
-        PjSipEndpoint* endpoint = [PjSipEndpoint instance];
-        PjSipAccount *account = [endpoint findAccount:accountId];
-        PjSipCall *call = [endpoint makeCall:account destination:destination callSettings:callSettings msgData:msgData];
-
-        // TODO: Remove this function
-        // Automatically put other calls on hold.
-        [endpoint pauseParallelCalls:call];
-
-        callback(@[@TRUE, [call toJsonDictionary:endpoint.isSpeaker]]);
+        PjSipEndpoint *endpoint = [PjSipEndpoint instance];
+        PjSipCall *call = [endpoint makeCallToDestination:destination callSettings:callSettings msgData:msgData];
+        
+        if (call) {
+            callback(@[@TRUE, [call toJsonDictionary:endpoint.isSpeaker]]);
+        } else {
+            callback(@[@FALSE, @"Failed to make call"]);
+        }
     }
     @catch (NSException * e) {
         callback(@[@FALSE, e.reason]);

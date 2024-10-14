@@ -117,17 +117,9 @@ declare module 'react-native-pjsip' {
     stop(): Promise<boolean>;
     isStarted(): Promise<boolean>;
     reconnect(): Promise<boolean>;
-    createAccount(account: CreateAccountParams): Promise<Account>;
-    registerAccount(account: Account, register: boolean): Promise<unknown>;
-    updateAccountCredentials(
-      account: Account,
-      credentials: AccountCredentials,
-    ): Promise<unknown>;
-    updateAccountContactUriParams(
-      account: Account,
-      params: string,
-    ): Promise<boolean>;
-    deleteAccount(account: Account): Promise<unknown>;
+    setAccountCreds(creds: CreateAccountParams | null): void;
+    registerExistingAccountIfNeeded(): void;
+    getCurrentAccount(): Promise<Account | null>;
     makeCall(account: Account, destination: string): Promise<SipCall>;
     dtmfCall(call: SipCall, digits: string): Promise<boolean>;
     answerCall: CallOperation;

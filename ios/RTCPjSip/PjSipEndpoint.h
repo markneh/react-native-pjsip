@@ -18,7 +18,6 @@ extern NSString * const PjSipEndpointLaunchStatusEventName;
 @property (nonatomic, assign, readonly) BOOL isStarted;
 @property (nonatomic, strong) SIPEventCallback sipEventCallback;
 
-@property NSMutableDictionary* accounts;
 @property NSMutableDictionary* calls;
 @property(nonatomic, strong) RCTBridge *bridge;
 
@@ -37,10 +36,14 @@ extern NSString * const PjSipEndpointLaunchStatusEventName;
 
 -(void) updateStunServers: (int) accountId stunServerList:(NSArray *)stunServerList;
 
--(PjSipAccount *)createAccount:(NSDictionary*) config;
--(void) deleteAccount:(int) accountId;
--(PjSipAccount *)findAccount:(int)accountId;
--(PjSipCall *)makeCall:(PjSipAccount *) account destination:(NSString *)destination callSettings: (NSDictionary *)callSettings msgData: (NSDictionary *)msgData;
+- (void)setAccountCreds:(NSDictionary *)config;
+- (void)scheduleExistingAccountUnregisterWithCompletion:(void (^)(void))completion;
+- (void)registerExistingAccountIfNeeded;
+- (void)unregisterExistingAccountIfNeeded;
+- (void)cancelScheduledAccountUnregister;
+- (PjSipAccount *)getCurrentAccount;
+
+-(PjSipCall *)makeCallToDestination:(NSString *)destination callSettings: (NSDictionary *)callSettings msgData: (NSDictionary *)msgData;
 -(void)pauseParallelCalls:(PjSipCall*) call; // TODO: Remove this feature.
 -(PjSipCall *)findCall:(int)callId;
 -(void)useSpeaker;
@@ -60,5 +63,7 @@ extern NSString * const PjSipEndpointLaunchStatusEventName;
 -(void)playDTMFDigitsAudioFeedback:(NSString *)digitsString;
 - (BOOL)activateAudioSessionWithError:(NSError **)error;
 - (BOOL)deactivateAudioSessionWithError:(NSError **)error;
+
+- (void)logDebugMessage:(NSString *)context message:(NSString *)message;
 
 @end

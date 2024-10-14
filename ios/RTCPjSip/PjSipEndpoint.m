@@ -23,6 +23,10 @@
 #define RING_CNT        3
 #define RING_INTERVAL        3000
 
+static const NSTimeInterval PjSipEndpointUnregisterTimerInterval = 10.0; // 10 seconds should be fine
+static const NSTimeInterval PjSipEndpointInitialFailedRegisterRetryDelay = 1.0; // 1 second
+static const NSTimeInterval PjSipEndpointFailedRegisterMaxRetryDelay = 30.0; // 30 seconds
+
 static NSString * const PjSipEndpointErrorDomain = @"com.react.native.pjsip";
 static NSString * const PjSipEndpointErrorStatusKey = @"pjsip.status.key";
 
@@ -99,6 +103,13 @@ static pjsip_module mod_default_handler =
 
 @interface PjSipEndpoint()
 @property (nonatomic, strong) NSDictionary *lastRegInfo;
+@property (nonatomic, strong) PjSipAccount *account;
+@property (nonatomic, strong) NSDictionary *pendingAccountConfig;
+@property (nonatomic, strong) NSTimer *unregisterAccountTimer;
+@property (nonatomic, copy) void (^unregisterCompletionBlock)(void);
+@property (nonatomic, assign) BOOL shouldUnregisterAtTheEndOfTheCall;
+@property (nonatomic, assign) NSTimeInterval currentRegistrationRetryDelay;
+@property (nonatomic, strong) NSTimer *failedRegisterRetryTimer;
 @end
 
 @implementation PjSipEndpoint
@@ -126,6 +137,7 @@ pj_pool_t *pool;
 
 - (instancetype) initWithConfig:(NSDictionary *)config {
     self = [super init];
+    self.currentRegistrationRetryDelay = PjSipEndpointInitialFailedRegisterRetryDelay;
     return self;
 }
 
@@ -146,13 +158,17 @@ pj_pool_t *pool;
     BOOL success = [self performStartWithConfig:config error:startError];
 
     [self emmitLaunchStatusUpdate:success];
+    
+    if (success) {
+        logDebugMessage(@"[startWithConfig:error:]", @"successfully started -> will try to handle previously saved account config");
+        [self applyPendingCredsIfNeeded];
+    }
 
     return success;
 }
 
 - (BOOL)performStartWithConfig:(NSDictionary *)config error:(NSError **)startError {
 
-    self.accounts = [[NSMutableDictionary alloc] initWithCapacity:12];
     self.calls = [[NSMutableDictionary alloc] initWithCapacity:12];
 
     pj_status_t status;
@@ -172,7 +188,7 @@ pj_pool_t *pool;
         return false;
     }
 
-    [PjSipUtil clearLogsFile];
+//    [PjSipUtil clearLogsFile];
 
     // Init pjsua
     {
@@ -180,15 +196,15 @@ pj_pool_t *pool;
         pjsua_config cfg;
         pjsua_config_default(&cfg);
 
-        // cfg.cb.on_reg_state = [self performSelector:@selector(onRegState:) withObject: o];
-        cfg.cb.on_reg_state = &onRegStateTest;
         cfg.cb.on_reg_state2 = &onRegStateChanged;
-        cfg.cb.on_reg_started2 = &onRegStarted;
         cfg.cb.on_incoming_call = &onCallReceived;
         cfg.cb.on_call_state = &onCallStateChanged;
         cfg.cb.on_call_media_state = &onCallMediaStateChanged;
 
         cfg.cb.on_pager2 = &onMessageReceived;
+        
+        cfg.cb.on_transport_state = &onTransportState;
+        cfg.cb.on_ice_transport_error = &onIceTransportError;
 
         NSString *ua = config[@"service"][@"ua"];
         if (ua && ua.length > 0) {
@@ -269,7 +285,7 @@ pj_pool_t *pool;
         pjsua_transport_config cfg;
         pjsua_transport_config_default(&cfg);
         pjsua_transport_id id;
-
+        
         // Add TCP transport.
         status = pjsua_transport_create(PJSIP_TRANSPORT_UDP, &cfg, &id);
 
@@ -346,7 +362,7 @@ pj_pool_t *pool;
         return status;
     }
 
-    status = [self launchUDPTransport];
+    status = [self createUDPTransport];
 
     return status;
 }
@@ -376,7 +392,7 @@ pj_pool_t *pool;
     return id;
 }
 
-- (pj_status_t)launchUDPTransport {
+- (pj_status_t)createUDPTransport {
     pjsua_transport_config cfg;
     pjsua_transport_config_default(&cfg);
     pjsua_transport_id id;
@@ -419,13 +435,12 @@ pj_pool_t *pool;
 }
 
 - (NSDictionary *)getInitialState:(NSDictionary *)config {
-    NSMutableArray *accountsResult = [[NSMutableArray alloc] initWithCapacity:[@([self.accounts count]) unsignedIntegerValue]];
+    NSMutableArray *accountsResult = [[NSMutableArray alloc] init];
     NSMutableArray *callsResult = [[NSMutableArray alloc] initWithCapacity:[@([self.calls count]) unsignedIntegerValue]];
     NSDictionary *settingsResult = @{ @"codecs": [self getCodecs] };
 
-    for (NSString *key in self.accounts) {
-        PjSipAccount *acc = self.accounts[key];
-        [accountsResult addObject:[acc toJsonDictionary]];
+    if (self.account) {
+        [accountsResult addObject:[self.account toJsonDictionary]];
     }
 
     for (NSString *key in self.calls) {
@@ -433,13 +448,6 @@ pj_pool_t *pool;
         [callsResult addObject:[call toJsonDictionary:self.isSpeaker]];
     }
 
-    if ([accountsResult count] > 0 && config[@"service"] && config[@"service"][@"stun"]) {
-        for (NSDictionary *account in accountsResult) {
-            int accountId = account[@"_data"][@"id"];
-            [[PjSipEndpoint instance] updateStunServers:accountId stunServerList:config[@"service"][@"stun"]];
-        }
-    }
-    
     NSMutableDictionary *info = [[NSMutableDictionary alloc] init];
     
     info[@"accounts"] = accountsResult;
@@ -465,7 +473,7 @@ pj_pool_t *pool;
     }
     
     // cleanup before destroying
-    self.accounts = [[NSMutableDictionary alloc] init];
+    self.account = nil;
     self.calls = [[NSMutableDictionary alloc] init];
     
     pj_status_t status = pjsua_destroy2(PJSUA_DESTROY_NO_RX_MSG);
@@ -473,6 +481,7 @@ pj_pool_t *pool;
     BOOL success = status == PJ_SUCCESS;
     
     if (success) {
+        self.pendingAccountConfig = nil;
         self.lastRegInfo = nil;
         [self emmitLaunchStatusUpdate:false];
     }
@@ -498,24 +507,246 @@ pj_pool_t *pool;
     pjsua_acc_modify(accountId, &cfg_update);
 }
 
-- (PjSipAccount *)createAccount:(NSDictionary *)config {
-    PjSipAccount *account = [PjSipAccount itemConfig:config];
-    self.accounts[@(account.id)] = account;
-
-    return account;
+- (PjSipAccount *)getCurrentAccount {
+    return self.account;
 }
 
-- (void)deleteAccount:(int) accountId {
-    // TODO: Destroy function ?
-    if (self.accounts[@(accountId)] == nil) {
-        [NSException raise:@"Failed to delete account" format:@"Account with %@ id not found", @(accountId)];
+- (void)applyPendingCredsIfNeeded {
+    if (self.pendingAccountConfig) {
+        logDebugMessage(@"[applyPendingCredsIfNeeded] got pending creds -> will update", [self.pendingAccountConfig description]);
+        [self setAccountCreds:self.pendingAccountConfig];
+        self.pendingAccountConfig = nil;
     }
-
-    [self.accounts removeObjectForKey:@(accountId)];
 }
 
-- (PjSipAccount *) findAccount: (int) accountId {
-    return self.accounts[@(accountId)];
+- (void)setAccountCreds:(NSDictionary *)config  {
+        
+    if (![self isStarted]) {
+        logDebugMessage(@"[setAccountCreds:]", @"pjsip is not started -> will set pending account config");
+        self.pendingAccountConfig = config;
+        return;
+    }
+    
+    if (!config) {
+        // pjsip account cleanup happens in PjSipAccount dealloc method
+        logDebugMessage(@"[setAccountCreds:]", @"config is nil -> will remove account");
+        self.account = nil; // this won't do anything if account is already nil
+        return;
+    }
+    
+    if (!self.account) {
+        logDebugMessage(@"[setAccountCreds:]", @"no account yet -> will try to create account");
+        pj_status_t status;
+        self.account = [PjSipAccount itemConfig:config status:&status];
+        
+        if (status == PJ_SUCCESS) {
+            logDebugMessage(@"[setAccountCreds:]", @"successfully created an account");
+        } else {
+            [self logStatus:status];
+            NSString *message = [self errorMessageFromStatus:status];
+            logDebugMessage(@"[setAccountCreds:] failed to create an account: %@", message);
+        }
+        return;
+    }
+    
+    logDebugMessage(@"[setAccountCreds:]", @"account exists -> will check if account needs to be update");
+
+    BOOL shouldUpdateAccount = [self.account shouldUpdateWithNewConfig:config];
+    if (!shouldUpdateAccount) {
+        logDebugMessage(@"[setAccountCreds:]", @"config didn't change -> won't proceed with updates");
+        return;
+    }
+    
+    BOOL isWaitingForRegResult = [self.account isRegInProgress];
+    BOOL hasCall = self.calls.count > 0;
+    
+    if (hasCall || isWaitingForRegResult) {
+        logDebugMessage(@"[setAccountCreds:]", @"can't update account yet -> there's a call or process of registered previous config is not finished yet");
+        self.pendingAccountConfig = config;
+    } else {
+        if (self.udpTransportId == PJSUA_INVALID_ID || [self.account lastRegError] == PJSIP_SC_SERVICE_UNAVAILABLE) {
+            logDebugMessage(@"[setAccountCreds:]", @"upd is down or last reg error is 503 -> will restart udp");
+            [self restartUDP];
+        }
+        
+        logDebugMessage(@"[setAccountCreds:]", @"account exists -> will update account");
+        pj_status_t status = [self.account updateAccount:config];
+        if (status != PJ_SUCCESS) {
+            [self logStatus:status];
+            NSString *message = [self errorMessageFromStatus:status];
+            logDebugMessage(@"[setAccountCreds:] failed to update account: ", message);
+        } else {
+            logDebugMessage(@"[setAccountCreds:]", @"successfully update account");
+        }
+    }
+}
+
+- (void)restartUDP {
+    logDebugMessage(@"[restartUDP]", @"");
+    pj_status_t status = [self createUDPTransport];
+    if (status != PJ_SUCCESS) {
+        [self logStatus:status];
+        NSString *message = [self errorMessageFromStatus:status];
+        logDebugMessage(@"[restartUDP] failed to start udp transport: ", message);
+    } else {
+        logDebugMessage(@"[restartUDP]", @"successfully started udp transport");
+    }
+}
+
+- (void)scheduleExistingAccountUnregisterWithCompletion:(void (^)(void))completion {
+    
+    if (![self isStarted]) {
+        logDebugMessage(@"[scheduleExistingAccountUnregister]", @"pjsip is not started");
+        if (completion) {
+            completion();
+        }
+        return;
+    }
+    
+    if (!self.account) {
+        logDebugMessage(@"[scheduleExistingAccountUnregister]", @"no account to unregister");
+        if (completion) {
+            completion();
+        }
+        return;
+    }
+    
+    if (completion) {
+        self.unregisterCompletionBlock = completion;
+    }
+    
+    if (self.unregisterAccountTimer) {
+        logDebugMessage(@"[scheduleExistingAccountUnregister]", @"invalidating existing unregister timer");
+        [self.unregisterAccountTimer invalidate];
+        self.unregisterAccountTimer = nil;
+    }
+    
+    logDebugMessage(@"[scheduleExistingAccountUnregister]", @"will set up an unregister timer");
+    self.unregisterAccountTimer = [NSTimer scheduledTimerWithTimeInterval:PjSipEndpointUnregisterTimerInterval
+                                                                   target:self
+                                                                 selector:@selector(unregisterExistingAccountIfNeeded)
+                                                                 userInfo:nil
+                                                                  repeats:NO];
+}
+
+- (void)cancelScheduledAccountUnregister {
+    logDebugMessage(@"[cancelExistingAccountUnregisterIfNeeded]", @"");
+    
+    logDebugMessage(@"[cancelExistingAccountUnregisterIfNeeded]", @"invalidating the need to unregister at the end of the call");
+    self.shouldUnregisterAtTheEndOfTheCall = NO;
+    
+    if (self.unregisterAccountTimer) {
+        logDebugMessage(@"[cancelExistingAccountUnregisterIfNeeded]", @"will invalidate unregister timer");
+        [self.unregisterAccountTimer invalidate];
+        self.unregisterAccountTimer = nil;
+    }
+    
+    [self invokeUnregisterCompletionBlock];
+}
+
+- (void)invokeUnregisterCompletionBlock {
+    if (self.unregisterCompletionBlock) {
+        logDebugMessage(@"[invokeUnregisterCompletionBlock]", @"will invoke unregister completion block");
+        self.unregisterCompletionBlock();
+        self.unregisterCompletionBlock = nil;
+    }
+}
+
+- (void)registerExistingAccountIfNeeded {
+    logDebugMessage(@"[registerExistingAccountIfNeeded]", @"");
+    
+    if (![self isStarted]) {
+        logDebugMessage(@"[registerExistingAccountIfNeeded]", @"pjsip is not started");
+        return;
+    }
+    
+    if (!self.account) {
+        logDebugMessage(@"[registerExistingAccountIfNeeded]", @"no account to register");
+        return;
+    }
+    
+    BOOL hasCall = self.calls.count > 0;
+    if (hasCall) {
+        logDebugMessage(@"[registerExistingAccountIfNeeded]", @"there's a call - no need to update reg manually");
+        return;
+    }
+    
+    if (self.udpTransportId == PJSUA_INVALID_ID || [self.account lastRegError] == PJSIP_SC_SERVICE_UNAVAILABLE) {
+        logDebugMessage(@"[registerExistingAccountIfNeeded]", @"looks like transport doesn't exist or last reg error failed -> will create new one");
+        [self restartUDP];
+    }
+    
+    logDebugMessage(@"[registerExistingAccountIfNeeded]", [self.account printStatusInfo]);
+    
+    // TODO: check if this logic works in all cases
+    logDebugMessage(@"[registerExistingAccountIfNeeded]", @"will check if account is in unreg state and need to be reregistered");
+    if ([self.account isUnregistered] && ![self.account isRegInProgress]) {
+        logDebugMessage(@"[registerExistingAccountIfNeeded]", @"in fact account is in unreg state -> will run reregister");
+        pj_status_t status = [self.account reregister];
+        if (status != PJ_SUCCESS) {
+            [self logStatus:status];
+            NSString *message = [self errorMessageFromStatus:status];
+            logDebugMessage(@"[registerExistingAccountIfNeeded] failed to sent reregister request: %@", message);
+        } else {
+            logDebugMessage(@"[registerExistingAccountIfNeeded]", @"successfully sent request");
+        }
+        logDebugMessage(@"[registerExistingAccountIfNeeded]", [self.account printStatusInfo]);
+    }
+}
+
+- (void)unregisterExistingAccountIfNeeded {
+    logDebugMessage(@"[unregisterExistingAccountIfNeeded]", @"");
+    
+    logDebugMessage(@"[unregisterExistingAccountIfNeeded]", @"setting the need to unregister at the end of the call");
+    self.shouldUnregisterAtTheEndOfTheCall = YES;
+    
+    if (![self isStarted]) {
+        logDebugMessage(@"[unregisterExistingAccountIfNeeded]", @"pjsip is not started");
+        [self invokeUnregisterCompletionBlock];
+        return;
+    }
+    
+    if (!self.account) {
+        logDebugMessage(@"[unregisterExistingAccountIfNeeded]", @"no account to unregister");
+        [self invokeUnregisterCompletionBlock];
+        return;
+    }
+    
+    BOOL hasCall = self.calls.count > 0;
+    if (hasCall) {
+        logDebugMessage(@"[unregisterExistingAccountIfNeeded]", @"has active call -> will delay unregister until the end of the call");
+        return;
+    }
+    
+    logDebugMessage(@"[unregisterExistingAccountIfNeeded]", @"will unregister account");
+    
+    pj_status_t status = [self.account unregister];
+    if (status != PJ_SUCCESS) {
+        [self logStatus:status];
+        NSString *message = [self errorMessageFromStatus:status];
+        logDebugMessage(@"[unregisterExistingAccountIfNeeded] failed to unregister account: %@", message);
+    }
+    
+    logDebugMessage(@"[unregisterExistingAccountIfNeeded]", [NSString stringWithFormat:@"unregister request successfull: %d", status == PJ_SUCCESS]);
+    logDebugMessage(@"[unregisterExistingAccountIfNeeded]", @"will close transport");
+    
+    if (self.udpTransportId == PJSUA_INVALID_ID) {
+        logDebugMessage(@"[unregisterExistingAccountIfNeeded]", @"can't close transport - no transport id");
+        [self invokeUnregisterCompletionBlock];
+        return;
+    }
+    
+    status = pjsua_transport_close(self.udpTransportId, PJ_FALSE);
+    if (status != PJ_SUCCESS) {
+        [self logStatus:status];
+        NSString *message = [self errorMessageFromStatus:status];
+        logDebugMessage(@"[unregisterExistingAccountIfNeeded] failed to close transport: %@", message);
+    } else {
+        logDebugMessage(@"[unregisterExistingAccountIfNeeded]", [NSString stringWithFormat:@"closed transport successfull: %d", status == PJ_SUCCESS]);
+        self.udpTransportId = PJSUA_INVALID_ID;
+    }
+    
+    [self invokeUnregisterCompletionBlock];
 }
 
 - (void)playDTMFDigitsAudioFeedback:(NSString *)digitsString {
@@ -613,7 +844,13 @@ pj_pool_t *pool;
 
 #pragma mark Calls
 
--(PjSipCall *) makeCall:(PjSipAccount *) account destination:(NSString *)destination callSettings: (NSDictionary *)callSettingsDict msgData: (NSDictionary *)msgDataDict {
+-(PjSipCall *) makeCallToDestination:(NSString *)destination callSettings: (NSDictionary *)callSettingsDict msgData: (NSDictionary *)msgDataDict {
+    
+    if (!self.account) {
+        logDebugMessage(@"[makeCallToDestination:callSettings:msgData]", @"no account to perform call");
+        return nil;
+    }
+    
     pjsua_call_setting callSettings;
     [PjSipUtil fillCallSettings:&callSettings dict:callSettingsDict];
 
@@ -640,7 +877,7 @@ pj_pool_t *pool;
         [NSException raise:@"Failed to make a call" format:@"Error while trying to activate AVAudioSession: %@", activationError];
     }
 
-    pj_status_t status = pjsua_call_make_call(account.id, &callDest, &callSettings, NULL, &msgData, &callId);
+    pj_status_t status = pjsua_call_make_call(self.account.accountId, &callDest, &callSettings, NULL, &msgData, &callId);
 
     if (status != PJ_SUCCESS) {
         [NSException raise:@"Failed to make a call" format:@"See device logs for more details."];
@@ -707,6 +944,10 @@ pj_pool_t *pool;
 
 - (void)resetSpeaker {
     self.isSpeaker = NO;
+}
+
+- (void)logDebugMessage:(NSString *)context message:(NSString *)message {
+    logDebugMessage(context, message);
 }
 
 #pragma mark - Settings
@@ -786,26 +1027,156 @@ pj_pool_t *pool;
     }
 }
 
+- (void)handleServiceUnavailableForRegisterRequest {
+    logDebugMessage(@"[handleServiceUnavailableForRegisterRequest]", @"");
+    
+    if (self.failedRegisterRetryTimer) {
+        logDebugMessage(@"[handleServiceUnavailableForRegisterRequest]", @"timer already exists -> will invalidate it");
+        [self.failedRegisterRetryTimer invalidate];
+        self.failedRegisterRetryTimer = nil;
+    }
+    
+    logDebugMessage(@"[handleServiceUnavailableForRegisterRequest] scheduling retry register timer in: ", @(self.currentRegistrationRetryDelay).description);
+    self.failedRegisterRetryTimer = [NSTimer scheduledTimerWithTimeInterval:self.currentRegistrationRetryDelay
+                                                                     target:self
+                                                                   selector:@selector(registerExistingAccountIfNeeded)
+                                                                   userInfo:nil
+                                                                    repeats:NO];
+
+    self.currentRegistrationRetryDelay = MIN(self.currentRegistrationRetryDelay * 2, PjSipEndpointFailedRegisterMaxRetryDelay);
+    logDebugMessage(@"[handleServiceUnavailableForRegisterRequest] setting next delay to be: ", @(self.currentRegistrationRetryDelay).description);
+}
+
+- (void)resetFailedRegisterTimer {
+    logDebugMessage(@"[resetFailedRegisterTimer]", @"resetting failed register timer logic");
+    self.currentRegistrationRetryDelay = PjSipEndpointInitialFailedRegisterRetryDelay;
+    
+    if (self.failedRegisterRetryTimer) {
+        logDebugMessage(@"[resetFailedRegisterTimer]", @"will invalidate existing timer");
+        [self.failedRegisterRetryTimer invalidate];
+        self.failedRegisterRetryTimer = nil;
+    }
+}
+
 #pragma mark - Callbacks
 
-static void onRegStarted(pjsua_acc_id acc_id, pjsua_reg_info *info) {
-
-}
-
-static void onRegStateTest(pjsua_acc_id acc_id) {
-    PjSipEndpoint* endpoint = [PjSipEndpoint instance];
-    PjSipAccount* account = [endpoint findAccount:acc_id];
-
-}
-
 static void onRegStateChanged(pjsua_acc_id acc_id, pjsua_reg_info *info) {
-    PjSipEndpoint* endpoint = [PjSipEndpoint instance];
-    PjSipAccount* account = [endpoint findAccount:acc_id];
+    PjSipEndpoint *endpoint = [PjSipEndpoint instance];
+    PjSipAccount *account = endpoint.account;
     NSDictionary *regInfo = [PjSipUtil mapRegInfo:info];
-
-    if (account) {
-        [endpoint emmitRegistrationChanged:account regInfo:regInfo];
+    
+    logDebugMessage(@"[onRegStateChanged]", [NSString stringWithFormat:@"got reg info: %@", regInfo]);
+    logDebugMessage(@"[onRegStateChanged]", [account printStatusInfo]);
+    log_pjsip_regc_cbparam(info->cbparam);
+    
+    if (!account) {
+        logDebugMessage(@"[onRegStateChanged]", [NSString stringWithFormat:@"no account but got reg info: %@", regInfo]);
+        return;
     }
+    
+    [endpoint emmitRegistrationChanged:account regInfo:regInfo];
+    
+    BOOL successResponse = info->cbparam->status == PJ_SUCCESS && info->cbparam->code == PJSIP_SC_OK;
+    
+    if (!successResponse) {
+        logDebugMessage(@"[onRegStateChanged]", [NSString stringWithFormat:@"response is failed: %@", regInfo]);
+        if (info->cbparam->code >= PJSIP_SC_SERVICE_UNAVAILABLE) {
+            logDebugMessage(@"[onRegStateChanged]", @"UDP is probably dead -> will try again");
+            [endpoint handleServiceUnavailableForRegisterRequest];
+        }
+        return;
+    } else {
+        logDebugMessage(@"[onRegStateChanged]", @"reg succeeded -> will reset failed timer");
+        [endpoint resetFailedRegisterTimer];
+    }
+    
+    if (info->cbparam->is_unreg == false) {
+        logDebugMessage(@"[onRegStateChanged]", @"account did register successfully -> will try to apply pending creds if needed");
+        [endpoint applyPendingCredsIfNeeded];
+    } else {
+        logDebugMessage(@"[onRegStateChanged]", @"account did unregister successfully -> will call register callback");
+        [endpoint invokeUnregisterCompletionBlock];
+    }
+}
+
+static void log_pjsip_regc_cbparam(struct pjsip_regc_cbparam *cbparam) {
+    if (!cbparam) {
+        NSLog(@"cbparam is NULL");
+        return;
+    }
+
+    // Log status
+    NSLog(@"Registration Callback Parameters:");
+    NSLog(@"- status: %d", cbparam->status);
+
+    // Log SIP status code
+    NSLog(@"- code: %d", cbparam->code);
+
+    // Log reason phrase
+    NSString *reasonString = [[NSString alloc] initWithBytes:cbparam->reason.ptr
+                                                      length:cbparam->reason.slen
+                                                    encoding:NSUTF8StringEncoding];
+    NSLog(@"- reason: %@", reasonString);
+
+    // Log expiration
+    NSLog(@"- expiration: %u", cbparam->expiration);
+
+    // Log contact count
+    NSLog(@"- contact_cnt: %d", cbparam->contact_cnt);
+
+    // Log is_unreg flag
+    NSLog(@"- is_unreg: %@", cbparam->is_unreg ? @"YES" : @"NO");
+
+    // Log each contact header
+    for (int i = 0; i < cbparam->contact_cnt && i < PJSIP_REGC_MAX_CONTACT; i++) {
+        pjsip_contact_hdr *contact_hdr = cbparam->contact[i];
+        if (contact_hdr) {
+            // Extract the contact URI
+            pjsip_uri *uri = (pjsip_uri *)contact_hdr->uri;
+            char uri_buf[256];
+            pj_str_t uri_str;
+            uri_str.ptr = uri_buf;
+            uri_str.slen = sizeof(uri_buf);
+            pjsip_uri_print(PJSIP_URI_IN_CONTACT_HDR, uri, uri_buf, sizeof(uri_buf));
+
+            NSLog(@"- Contact[%d]: %s", i, uri_buf);
+        } else {
+            NSLog(@"- Contact[%d]: NULL", i);
+        }
+    }
+
+    // If you need to log more details, such as the entire received SIP message (rdata)
+    // Note: Be cautious with large data and sensitive information
+    if (cbparam->rdata) {
+        // Log the received response status line
+        pjsip_status_line *status_line = &cbparam->rdata->msg_info.msg->line.status;
+        NSLog(@"- rdata status code: %d", status_line->code);
+
+        // Log the reason phrase from rdata
+        NSString *rdataReasonString = [[NSString alloc] initWithBytes:status_line->reason.ptr
+                                                               length:status_line->reason.slen
+                                                             encoding:NSUTF8StringEncoding];
+        NSLog(@"- rdata reason: %@", rdataReasonString);
+
+        // Optionally, log the entire response message (headers and body)
+        // Be cautious as this may include sensitive information
+        char buf[2000];
+        int len = pjsip_msg_print(cbparam->rdata->msg_info.msg, buf, sizeof(buf));
+        if (len > 0) {
+            NSString *msgString = [[NSString alloc] initWithBytes:buf
+                                                           length:len
+                                                         encoding:NSUTF8StringEncoding];
+            NSLog(@"- rdata message:\n%@", msgString);
+        }
+    }
+}
+
+void logDebugMessage(NSString *context, NSString *message) {
+#ifdef DEBUG
+    NSLog(@"[PjSipEndpoint][%@] %@", context, message);
+#else
+    [PjSipUtil logPjMessage:@"" content:[NSString stringWithFormat:@"%@ %@", context, message]];
+#endif
 }
 
 static void onCallReceived(pjsua_acc_id accId, pjsua_call_id callId, pjsip_rx_data *rx) {
@@ -880,6 +1251,12 @@ static void onCallStateChanged(pjsua_call_id callId, pjsip_event *event) {
         [endpoint emmitCallTerminated:call];
         [endpoint resetSpeaker]; // this might be triggered if there's another incoming call which is automatically declined
         [endpoint deinitDTMFTonegenIfNeeded];
+        if (endpoint.shouldUnregisterAtTheEndOfTheCall) {
+            logDebugMessage(@" onCallStateChanged()", @"call just ended and there's a need to unregister -> will try now");
+            [endpoint unregisterExistingAccountIfNeeded];
+        } else {
+            [endpoint applyPendingCredsIfNeeded];
+        }
     } else {
         [endpoint emmitCallChanged:call];
     }
@@ -903,6 +1280,22 @@ static void onCallMediaStateChanged(pjsua_call_id callId) {
 
     [[NSNotificationCenter defaultCenter] postNotificationName:@"PjSipInvalidateVideo"
                                                         object:nil];
+}
+
+static void onTransportState(pjsip_transport *tp, pjsip_transport_state state, const pjsip_transport_state_info *info) {
+    logDebugMessage(@"onTransportState()", [NSString stringWithFormat:@"transport state: %u\nstatus: %@",
+                                            state,
+                                            info->status == PJ_SUCCESS ? @"Success" : [[PjSipEndpoint instance] errorMessageFromStatus:info->status]
+                                           ]);
+}
+
+static void onIceTransportError(int index, pj_ice_strans_op op,
+                                pj_status_t status, void *param) {
+    logDebugMessage(@"onIceTransportError()", [NSString stringWithFormat:@"index: %i\nop: %u\nstatus: %@",
+                                               index,
+                                               op,
+                                               status == PJ_SUCCESS ? @"Success" : [[PjSipEndpoint instance] errorMessageFromStatus:status]
+                                              ]);
 }
 
 static void onMessageReceived(pjsua_call_id call_id, const pj_str_t *from,
@@ -931,6 +1324,7 @@ static void onLog(int level, const char *data, int len) {
         dispatch_async(dispatch_get_main_queue(), ^{
             [[PjSipEndpoint instance] emmitLogMessage:message];
             [PjSipUtil appendLogMessage:message];
+            NSLog(@"%@", message);
         });
     }
 }

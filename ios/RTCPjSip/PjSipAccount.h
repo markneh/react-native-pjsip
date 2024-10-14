@@ -4,36 +4,23 @@
 
 @interface PjSipAccount : NSObject
 
-@property int id;
-@property NSString * name;
-@property NSString * username;
-@property NSString * domain;
-@property NSString * password;
-@property NSString * proxy;
-@property NSString * transport;
++ (instancetype)itemConfig:(NSDictionary *)config status:(pj_status_t *)status;
 
-@property NSString * contactParams;
-@property NSString * contactUriParams;
+- (BOOL)shouldUpdateWithNewConfig:(NSDictionary *)newConfig;
+- (BOOL)isRegInProgress;
 
-
-@property NSString * regServer;
-@property NSNumber * regTimeout;
-@property NSDictionary * regHeaders;
-@property NSString * regContactParams;
-@property bool regOnAdd;
-
-+ (instancetype)itemConfig:(NSDictionary *)config;
-
-- (id)initWithConfig:(NSDictionary *)config;
-- (int)id;
-
-- (PjSipCall *) makeCall: (NSString *) destination;
-- (void) register: (bool) renew;
-
+- (pj_status_t)updateAccount:(NSDictionary *)newConfig;
+    
+- (pjsua_acc_id)accountId;
 - (NSDictionary *)toJsonDictionary;
 
-- (BOOL)updateCredentials:(NSDictionary *)credentials;
-- (BOOL)updateContactUriParams:(NSString *)newParams;
+- (NSString *)printStatusInfo;
+
+- (pj_status_t)unregister;
+- (pj_status_t)reregister;
+
+- (BOOL)isUnregistered;
+- (pj_status_t)lastRegError;
 
 
 @end

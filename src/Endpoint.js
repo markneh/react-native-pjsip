@@ -184,100 +184,32 @@ export default class Endpoint extends EventEmitter {
         });
     }
 
-    /**
-     * Add a new account. If registration is configured for this account, this function would also start the
-     * SIP registration session with the SIP registrar server. This SIP registration session will be maintained
-     * internally by the library, and application doesn't need to do anything to maintain the registration session.
-     *
-     * An example configuration:
-     * {
-     *   name: "John Doe",
-     *   username: "100",
-     *   domain: "pbx.com",
-     *   password: "XXXXXX",
-     *
-     *   proxy: "192.168.100.1:5060", // default disabled.
-     *   transport: "TCP", // default TCP
-     *   regServer: "pbx.com", // default taken from domain
-     *   regTimeout: 300, // default 300
-     * }
-     *
-     * @param {Object} configuration
-     * @returns {Promise}
-     */
-    createAccount(configuration) {
-        return new Promise(function(resolve, reject) {
-            NativeModules.PjSipModule.createAccount(configuration, (successful, data) => {
-                if (successful) {
-                    resolve(new Account(data));
-                } else {
-                    reject(data);
-                }
+    setAccountCreds(creds) {
+        // return new Promise(function(resolve, reject) {
+            NativeModules.PjSipModule.setAccountCreds(creds, (successful, data) => {
+                // if (successful) {
+                //     resolve(new Account(data));
+                // } else {
+                //     reject(data);
+                // }
             });
-        });
+        // });
     }
 
-    replaceAccount(account, configuration) {
-        throw new Error("Not implemented");
+    registerExistingAccountIfNeeded() {
+      NativeModules.PjSipModule.registerExistingAccountIfNeeded(() => {});
     }
 
-    updateAccountCredentials(account, credentials) {
-        return new Promise((resolve, reject) => {
-            NativeModules.PjSipModule.updateAccount(account.getId(), credentials, (successful) => {
-                if (successful) {
-                    resolve();
-                } else {
-                    reject();
-                }
-            })
-        })
-    }
-
-    updateAccountContactUriParams(account, credentials) {
-        return new Promise((resolve, reject) => {
-            NativeModules.PjSipModule.updateAccountContactUriParams(account.getId(), credentials, (successful) => {
-                  resolve(successful);
-            })
-        })
-    }
-
-    /**
-     * Update registration or perform unregistration.
-     * If registration is configured for this account, then initial SIP REGISTER will be sent when the account is added.
-     * Application normally only need to call this function if it wants to manually update the registration or to unregister from the server.
-     *
-     * @param {Account} account
-     * @param bool renew If renew argument is zero, this will start unregistration process.
-     * @returns {Promise}
-     */
-    registerAccount(account, renew = true) {
-        return new Promise(function(resolve, reject) {
-            NativeModules.PjSipModule.registerAccount(account.getId(), renew, (successful, data) => {
-                if (successful) {
-                    resolve(data);
-                } else {
-                    reject(data);
-                }
-            });
-        });
-    }
-
-    /**
-     * Delete an account. This will unregister the account from the SIP server, if necessary, and terminate server side presence subscriptions associated with this account.
-     *
-     * @param {Account} account
-     * @returns {Promise}
-     */
-    deleteAccount(account) {
-        return new Promise(function(resolve, reject) {
-            NativeModules.PjSipModule.deleteAccount(account.getId(), (successful, data) => {
-                if (successful) {
-                    resolve(data);
-                } else {
-                    reject(data);
-                }
-            });
-        });
+    getCurrentAccount() {
+      return new Promise((resolve, reject) => {
+          NativeModules.PjSipModule.getCurrentAccount((successful, data) => {
+            if (successful) {
+              resolve(new Account(data));
+            } else {
+              reject(data);
+            }
+          });
+      })
     }
 
     /**
@@ -296,7 +228,7 @@ export default class Endpoint extends EventEmitter {
         destination = this._normalize(account, destination);
 
         return new Promise(function(resolve, reject) {
-            NativeModules.PjSipModule.makeCall(account.getId(), destination, callSettings, msgData, (successful, data) => {
+            NativeModules.PjSipModule.makeCallToDestination(destination, callSettings, msgData, (successful, data) => {
                 if (successful) {
                     resolve(new Call(data));
                 } else {
