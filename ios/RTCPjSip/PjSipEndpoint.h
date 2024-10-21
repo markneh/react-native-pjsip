@@ -75,6 +75,6 @@ extern NSString * const PjSipEndpointLogEventMessageKey;
 - (BOOL)activateAudioSessionWithError:(NSError **)error;
 - (BOOL)deactivateAudioSessionWithError:(NSError **)error;
 
-- (void)logDebugMessage:(NSString *)context message:(NSString *)message;
+- (void)logDebugMessageWithType:(PjSipEndpointLogType)logType context:(NSString *)context message:(NSString *)message;
 
 @end

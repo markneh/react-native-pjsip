@@ -291,13 +291,6 @@ RCT_EXPORT_METHOD(getCodecs: (RCTResponseSenderBlock)callback) {
 
 #pragma mark - Utility
 
-RCT_EXPORT_METHOD(logMessage:(NSDictionary *)message callback:(RCTResponseSenderBlock)callback) {
-    NSString *type = message[@"type"];
-    NSString *content = message[@"content"];
-    [[PjSipEndpoint instance] logDebugMessage:type message:content];
-    callback(@[@YES]);
-}
-
 RCT_EXPORT_METHOD(getLogsFilePathUrl:(RCTResponseSenderBlock)callback) {
     NSURL *url = [PjSipUtil getLogFilePathUrl];
     BOOL success = url != nil;
