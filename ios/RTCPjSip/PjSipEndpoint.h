@@ -5,6 +5,14 @@
 
 typedef void (^SIPEventCallback)(NSString *name, id metadata);
 
+typedef NS_ENUM(NSUInteger, PjSipEndpointLogType) {
+    PjSipEndpointLogTypeVerbose,
+    PjSipEndpointLogTypeDebug,
+    PjSipEndpointLogTypeInfo,
+    PjSipEndpointLogTypeWarning,
+    PjSipEndpointLogTypeError,
+};
+
 extern NSString * const PjSipEndpointRegistrationEventName;
 extern NSString * const PjSipEndpointCallReceiveEventName;
 extern NSString * const PjSipEndpointCallChangeEventName;
@@ -12,6 +20,9 @@ extern NSString * const PjSipEndpointCallTerminationEventName;
 extern NSString * const PjSipEndpointMessageReceiveEventName;
 extern NSString * const PjSipEndpointLogEventName;
 extern NSString * const PjSipEndpointLaunchStatusEventName;
+
+extern NSString * const PjSipEndpointLogEventTypeKey;
+extern NSString * const PjSipEndpointLogEventMessageKey;
 
 @interface PjSipEndpoint : NSObject
 

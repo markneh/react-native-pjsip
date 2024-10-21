@@ -294,7 +294,7 @@ RCT_EXPORT_METHOD(getCodecs: (RCTResponseSenderBlock)callback) {
 RCT_EXPORT_METHOD(logMessage:(NSDictionary *)message callback:(RCTResponseSenderBlock)callback) {
     NSString *type = message[@"type"];
     NSString *content = message[@"content"];
-    [PjSipUtil logPjMessage:type content:content];
+    [[PjSipEndpoint instance] logDebugMessage:type message:content];
     callback(@[@YES]);
 }
 
