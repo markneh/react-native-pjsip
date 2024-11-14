@@ -94,7 +94,7 @@ public class PjSipService extends Service {
 
     private PjSipBroadcastEmiter mEmitter;
 
-    private List<PjSipAccount> mAccounts = new ArrayList<>();
+    private PjSipAccount mAccount;
 
     private List<PjSipCall> mCalls = new ArrayList<>();
 
@@ -144,8 +144,8 @@ public class PjSipService extends Service {
         // Start stack
         try {
 
-            // remove all accounts just to be safe
-            mAccounts.clear();
+            // remove current account just to be safe
+            evictCurrentAccountIfNeeded();
             Runtime.getRuntime().gc();
 
             mEndpoint = new Endpoint();
@@ -242,6 +242,10 @@ public class PjSipService extends Service {
 
         boolean isStartIntent = action != null && action.equals(PjActions.ACTION_START);
         if (isStartIntent && isStarted()) {
+            List<PjSipAccount> mAccounts = new ArrayList<PjSipAccount>();
+            if (mAccount != null) {
+                mAccounts.add(mAccount);
+            }
             mEmitter.fireStarted(intent, mAccounts, mCalls, getCodecsAsJson());
         } else if (isStartIntent) {
             job(() -> initEndpoint(intent));
@@ -318,23 +322,22 @@ public class PjSipService extends Service {
         return mEndpoint.audDevManager();
     }
 
-    public void evict(final PjSipAccount account) {
+    public void evictCurrentAccountIfNeeded() {
         if (mHandler.getLooper().getThread() != Thread.currentThread()) {
             job(new Runnable() {
                 @Override
                 public void run() {
-                    evict(account);
+                    evictCurrentAccountIfNeeded();
                 }
             });
             return;
         }
 
-        // Remove link to account
-        mAccounts.remove(account);
-
         // Remove account in PjSip
-        account.delete();
-
+        if (mAccount != null) {
+            mAccount.delete();
+            mAccount = null;
+        }
     }
 
     public void evict(final PjSipCall call) {
@@ -454,6 +457,11 @@ public class PjSipService extends Service {
 
         JSONObject codecs = getCodecsAsJson();
 
+        List<PjSipAccount> mAccounts = new ArrayList<PjSipAccount>();
+        if (mAccount != null) {
+            mAccounts.add(mAccount);
+        }
+
         mEmitter.fireStarted(intent, mAccounts, mCalls, codecs);
     }
 
@@ -526,22 +534,14 @@ public class PjSipService extends Service {
 
     private void handleAccountRegister(Intent intent) {
         try {
-            int accountId = intent.getIntExtra("account_id", -1);
+            if (mAccount == null) {
+                Log.i(TAG, "handleAccountRegister() -> account doesn't exist");
+                mEmitter.fireIntentHandled(intent);
+                return;
+            }
+
             boolean renew = intent.getBooleanExtra("renew", false);
-            PjSipAccount account = null;
-
-            for (PjSipAccount a : mAccounts) {
-                if (a.getId() == accountId) {
-                    account = a;
-                    break;
-                }
-            }
-
-            if (account == null) {
-                throw new Exception("Account with \""+ accountId +"\" id not found");
-            }
-
-            account.register(renew);
+            mAccount.register(renew);
 
             // -----
             mEmitter.fireIntentHandled(intent);
@@ -637,29 +637,14 @@ public class PjSipService extends Service {
         mTrash.add(cfg);
         mTrash.add(cred);
 
-        mAccounts.add(account);
+        mAccount = account;
 
         return account;
     }
 
     private void handleAccountDelete(Intent intent) {
         try {
-            int accountId = intent.getIntExtra("account_id", -1);
-            PjSipAccount account = null;
-
-            for (PjSipAccount a : mAccounts) {
-                if (a.getId() == accountId) {
-                    account = a;
-                    break;
-                }
-            }
-
-            if (account == null) {
-                throw new Exception("Account with \""+ accountId +"\" id not found");
-            }
-
-            evict(account);
-
+            evictCurrentAccountIfNeeded();
             // -----
             mEmitter.fireIntentHandled(intent);
         } catch (Exception e) {
@@ -1008,10 +993,8 @@ public class PjSipService extends Service {
     }
 
     private PjSipAccount findAccount(int id) throws Exception {
-        for (PjSipAccount account : mAccounts) {
-            if (account.getId() == id) {
-                return account;
-            }
+        if (mAccount != null && mAccount.getId() == id) {
+            return mAccount;
         }
 
         throw new Exception("Account with specified \""+ id +"\" id not found");
