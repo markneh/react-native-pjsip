@@ -1,7 +1,9 @@
 package com.carusto.ReactNativePjSip;
 
 import static org.pjsip.pjsua2.pj_constants_.PJ_FALSE;
+import static org.pjsip.pjsua2.pj_constants_.PJ_SUCCESS;
 import static org.pjsip.pjsua2.pj_file_access.PJ_O_APPEND;
+import static org.pjsip.pjsua2.pjsip_status_code.PJSIP_SC_OK;
 import static org.pjsip.pjsua2.pjsua_call_flag.PJSUA_CALL_INCLUDE_DISABLED_MEDIA;
 import static org.pjsip.pjsua2.pjsua_stun_use.PJSUA_STUN_RETRY_ON_FAILURE;
 
@@ -468,6 +470,8 @@ public class PjSipService extends Service {
             }
         }
 
+        applyPendingCredsIfNeeded();
+
         JSONObject codecs = getCodecsAsJson();
 
         List<PjSipAccount> mAccounts = new ArrayList<PjSipAccount>();
@@ -836,7 +840,7 @@ public class PjSipService extends Service {
             // -----
             PjSipCall call = findCall(callId);
             CallOpParam prm = new CallOpParam();
-            prm.setStatusCode(pjsip_status_code.PJSIP_SC_OK);
+            prm.setStatusCode(PJSIP_SC_OK);
             CallSetting settings = prm.getOpt();
             settings.setVideoCount(0);
             call.answer(prm);
@@ -1090,6 +1094,11 @@ public class PjSipService extends Service {
 
     void emmitRegistrationChanged(PjSipAccount account, OnRegStateParam prm) {
         getEmitter().fireRegistrationChangeEvent(account, prm);
+
+        if (prm.getCode() == PJSIP_SC_OK && prm.getStatus() == PJ_SUCCESS && prm.getExpiration() > 0) {
+            Log.i(TAG, "onRegStateChanged() account did register successfully -> will try to apply pending creds if needed");
+            applyPendingCredsIfNeeded();
+        }
     }
 
     void emmitLaunchStatusUpdateEvent() {
@@ -1170,6 +1179,9 @@ public class PjSipService extends Service {
                         if (mUseSpeaker && mAudioManager.isSpeakerphoneOn()) {
                             setSpeaker(false);
                         }
+
+                        Log.d(TAG, "emmitCallStateChanged() call ended -> will apply pending creds if needed");
+                        applyPendingCredsIfNeeded();
                     } else {
                         emmitCallChanged(call, prm);
                     }
