@@ -102,7 +102,9 @@ public class PjSipModule extends ReactContextBaseJavaModule {
     }
 
     public void getCurrentAccount(Callback callback) {
-        // TODO: implement this
+        int callbackId = receiver.register(callback);
+        Intent intent = PjActions.createGetCurrentAccountIntent(callbackId, getReactApplicationContext());
+        start(intent);
     }
 
     @ReactMethod

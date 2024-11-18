@@ -26,8 +26,7 @@ public class PjActions {
     public static final String ACTION_CHECK_IF_STARTED = "check_if_started";
     public static final String ACTION_SET_CREDS = "set_crds";
     public static final String ACTION_CHANGE_CODEC_SETTINGS= "change_codec_settings'";
-    public static final String ACTION_REGISTER_ACCOUNT = "account_register";
-    public static final String ACTION_DELETE_ACCOUNT = "account_delete";
+    public static final String ACTION_GET_ACCOUNT = "get_account";
     public static final String ACTION_MAKE_CALL = "call_make";
     public static final String ACTION_HANGUP_CALL = "call_hangup";
     public static final String ACTION_DECLINE_CALL = "call_decline";
@@ -110,23 +109,12 @@ public class PjActions {
         return intent;
     }
 
-    public static Intent createAccountRegisterIntent(int callbackId, int accountId, boolean renew, Context context) {
-        Intent intent = new Intent(context, PjSipService.class);
-        intent.setAction(PjActions.ACTION_REGISTER_ACCOUNT);
-        intent.putExtra("callback_id", callbackId);
-        intent.putExtra("account_id", accountId);
-        intent.putExtra("renew", renew);
+    public static Intent createGetCurrentAccountIntent(int callbackId, Context context) {
+       Intent intent = new Intent(context, PjSipService.class) ;
+       intent.setAction(PjActions.ACTION_GET_ACCOUNT);
+       intent.putExtra("callback_id", callbackId);
 
-        return intent;
-    }
-
-    public static Intent createAccountDeleteIntent(int callbackId, int accountId, Context context) {
-        Intent intent = new Intent(context, PjSipService.class);
-        intent.setAction(PjActions.ACTION_DELETE_ACCOUNT);
-        intent.putExtra("callback_id", callbackId);
-        intent.putExtra("account_id", accountId);
-
-        return intent;
+       return intent;
     }
 
     public static Intent createMakeCallIntent(int callbackId, int accountId, String destination, ReadableMap settings, ReadableMap message, Context context) {

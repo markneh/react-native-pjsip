@@ -392,11 +392,8 @@ public class PjSipService extends Service {
             case PjActions.ACTION_SET_CREDS:
                 handleSetAccountCreds(intent);
                 break;
-            case PjActions.ACTION_REGISTER_ACCOUNT:
-                handleAccountRegister(intent);
-                break;
-            case PjActions.ACTION_DELETE_ACCOUNT:
-                handleAccountDelete(intent);
+            case PjActions.ACTION_GET_ACCOUNT:
+                handleGetCurrentAccountIntent(intent);
                 break;
 
             // Call actions
@@ -598,24 +595,6 @@ public class PjSipService extends Service {
         }
     }
 
-    private void handleAccountRegister(Intent intent) {
-        try {
-            if (mAccount == null) {
-                Log.i(TAG, "handleAccountRegister() -> account doesn't exist");
-                mEmitter.fireIntentHandled(intent);
-                return;
-            }
-
-            boolean renew = intent.getBooleanExtra("renew", false);
-            mAccount.register(renew);
-
-            // -----
-            mEmitter.fireIntentHandled(intent);
-        } catch (Exception e) {
-            mEmitter.fireIntentHandled(intent, e);
-        }
-    }
-
     private PjSipAccount doAccountCreate(AccountConfigurationDTO configuration) throws Exception {
         int transportId = transportIdForConfiguration(configuration);
         AccountConfig cfg = accountConfigFromConfiguration(configuration, transportId);
@@ -724,11 +703,13 @@ public class PjSipService extends Service {
         return cfg;
     }
 
-    private void handleAccountDelete(Intent intent) {
+    private void handleGetCurrentAccountIntent(Intent intent) {
         try {
-            evictCurrentAccountIfNeeded();
-            // -----
-            mEmitter.fireIntentHandled(intent);
+            if (mAccount != null) {
+                mEmitter.fireIntentHandled(intent, mAccount.toJson());
+            } else {
+                mEmitter.fireIntentHandled(intent);
+            }
         } catch (Exception e) {
             mEmitter.fireIntentHandled(intent, e);
         }

@@ -29,22 +29,10 @@ public class PjSipAccount extends Account {
 
     private Integer transportId;
 
-    private boolean isWaitingForRegResultAlready;
-
     public PjSipAccount(PjSipService service, int transportId, AccountConfigurationDTO configuration) {
         this.service = service;
         this.transportId = transportId;
         this.configuration = configuration;
-    }
-
-    public void register(boolean renew) throws Exception {
-        if (isWaitingForRegResultAlready) {
-            return;
-        }
-
-        isWaitingForRegResultAlready = true;
-
-        setRegistration(renew);
     }
 
     public PjSipService getService() {
@@ -94,7 +82,6 @@ public class PjSipAccount extends Account {
         reason = prm.getReason();
         lastRegStateParam = prm;
         service.emmitRegistrationChanged(this, prm);
-        isWaitingForRegResultAlready = false;
     }
 
     @Override
