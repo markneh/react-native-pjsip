@@ -1,8 +1,13 @@
 package com.carusto.ReactNativePjSip;
 
+import static org.pjsip.pjsua2.pjsip_status_code.PJSIP_SC_TRYING;
+
+import android.util.Log;
+
 import com.carusto.ReactNativePjSip.dto.AccountConfigurationDTO;
 import org.json.JSONObject;
 import org.pjsip.pjsua2.Account;
+import org.pjsip.pjsua2.AccountInfo;
 import org.pjsip.pjsua2.OnIncomingCallParam;
 import org.pjsip.pjsua2.OnInstantMessageParam;
 import org.pjsip.pjsua2.OnRegStateParam;
@@ -52,6 +57,24 @@ public class PjSipAccount extends Account {
 
     public AccountConfigurationDTO getConfiguration() {
         return configuration;
+    }
+
+    public boolean shouldUpdateConfiguration(AccountConfigurationDTO configuration) {
+        return !this.configuration.equals(configuration);
+    }
+
+    public boolean isRegInProgress() {
+        try {
+            AccountInfo info = getInfo();
+            return info.getRegStatus() == PJSIP_SC_TRYING;
+        } catch (Exception e) {
+           Log.e(TAG, "isRegInPress() failed to get account info", e);
+        }
+        return false;
+    }
+
+    public void updateAccount(AccountConfigurationDTO configuration) {
+       // TODO: implement this
     }
 
     public String getRegistrationStatusText() {

@@ -4,6 +4,7 @@ import android.content.Intent;
 import androidx.annotation.Nullable;
 
 import java.util.Map;
+import java.util.Objects;
 
 public class AccountConfigurationDTO {
 
@@ -126,6 +127,10 @@ public class AccountConfigurationDTO {
         c.contactParams = intent.getStringExtra("contactParams");
         c.contactUriParams = intent.getStringExtra("contactUriParams");
 
+        if (c.domain == null || c.domain.isEmpty() || c.username == null || c.username.isEmpty()) {
+            return null;
+        }
+
         c.regServer = intent.getStringExtra("regServer");
         c.regTimeout = 600;
         c.regOnAdd = intent.getBooleanExtra("regOnAdd", true);
@@ -148,5 +153,32 @@ public class AccountConfigurationDTO {
         }
 
         return c;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        AccountConfigurationDTO that = (AccountConfigurationDTO) o;
+        return regOnAdd == that.regOnAdd &&
+                Objects.equals(name, that.name) &&
+                Objects.equals(username, that.username) &&
+                Objects.equals(domain, that.domain) &&
+                Objects.equals(password, that.password) &&
+                Objects.equals(proxy, that.proxy) &&
+                Objects.equals(transport, that.transport) &&
+                Objects.equals(contactParams, that.contactParams) &&
+                Objects.equals(contactUriParams, that.contactUriParams) &&
+                Objects.equals(regServer, that.regServer) &&
+                Objects.equals(regTimeout, that.regTimeout) &&
+                Objects.equals(regHeaders, that.regHeaders) &&
+                Objects.equals(regContactParams, that.regContactParams);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name, username, domain, password, proxy, transport,
+                contactParams, contactUriParams, regServer, regTimeout,
+                regHeaders, regContactParams, regOnAdd);
     }
 }

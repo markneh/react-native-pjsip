@@ -91,24 +91,18 @@ public class PjSipModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void createAccount(ReadableMap configuration, Callback callback) {
-        int id = receiver.register(callback);
-        Intent intent = PjActions.createAccountCreateIntent(id, configuration, getReactApplicationContext());
+    public void setAccountCreds(ReadableMap creds, Callback callback) {
+        Intent intent = PjActions.createSetAccountCredsIntent(creds, getReactApplicationContext());
         start(intent);
     }
 
     @ReactMethod
-    public void registerAccount(int accountId, boolean renew, Callback callback) {
-        int id = receiver.register(callback);
-        Intent intent = PjActions.createAccountRegisterIntent(id, accountId, renew, getReactApplicationContext());
-        start(intent);
+    public void registerExistingAccountIfNeeded() {
+        // TODO: implement this
     }
 
-    @ReactMethod
-    public void deleteAccount(int accountId, Callback callback) {
-        int callbackId = receiver.register(callback);
-        Intent intent = PjActions.createAccountDeleteIntent(callbackId, accountId, getReactApplicationContext());
-        start(intent);
+    public void getCurrentAccount(Callback callback) {
+        // TODO: implement this
     }
 
     @ReactMethod

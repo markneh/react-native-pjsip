@@ -121,6 +121,8 @@ public class PjSipService extends Service {
 
     private BroadcastReceiver mPhoneStateChangedReceiver = new PhoneStateChangedReceiver();
 
+    private Intent mPendingAccountConfigurationIntent;
+
     public PjSipBroadcastEmiter getEmitter() {
         return mEmitter;
     }
@@ -301,6 +303,8 @@ public class PjSipService extends Service {
     }
 
     private void destroyEndpoint() throws Exception {
+        mPendingAccountConfigurationIntent = null;
+
         if (mEndpoint == null) {
             Log.d(TAG, "Attempt to destroy endpoint but none was initialized");
             emmitLaunchStatusUpdateEvent();
@@ -335,8 +339,17 @@ public class PjSipService extends Service {
 
         // Remove account in PjSip
         if (mAccount != null) {
+            Log.i(TAG, "evictCurrentAccountIfNeeded() -> will remove current account");
             mAccount.delete();
             mAccount = null;
+        }
+    }
+
+    private void applyPendingCredsIfNeeded() {
+        if (mPendingAccountConfigurationIntent != null) {
+            Log.i(TAG, "applyPendingCredsIfNeeded() got pending creds -> will update " + mPendingAccountConfigurationIntent.toString());
+            handleSetAccountCreds(mPendingAccountConfigurationIntent);
+            mPendingAccountConfigurationIntent = null;
         }
     }
 
@@ -374,8 +387,8 @@ public class PjSipService extends Service {
                 break;
 
             // Account actions
-            case PjActions.ACTION_CREATE_ACCOUNT:
-                handleAccountCreate(intent);
+            case PjActions.ACTION_SET_CREDS:
+                handleSetAccountCreds(intent);
                 break;
             case PjActions.ACTION_REGISTER_ACCOUNT:
                 handleAccountRegister(intent);
@@ -520,15 +533,64 @@ public class PjSipService extends Service {
         mServiceConfiguration = configuration;
     }
 
-    private void handleAccountCreate(Intent intent) {
-        try {
-            AccountConfigurationDTO accountConfiguration = AccountConfigurationDTO.fromIntent(intent);
-            PjSipAccount account = doAccountCreate(accountConfiguration);
+    private void handleSetAccountCreds(Intent intent) {
+        AccountConfigurationDTO accountConfiguration = AccountConfigurationDTO.fromIntent(intent);
 
-            // Emmit response
-            mEmitter.fireAccountCreated(intent, account);
-        } catch (Exception e) {
-            mEmitter.fireIntentHandled(intent, e);
+        if (accountConfiguration == null) {
+            Log.i(TAG, "handleSetAccountCreds() config is null -> will remove account");
+            evictCurrentAccountIfNeeded();
+            return;
+        }
+
+        if (!isStarted()) {
+            Log.i(TAG, "handleSetAccountCreds() pjsip is not started -> will set pending account config");
+            mPendingAccountConfigurationIntent = intent;
+            return;
+        }
+
+        if (mAccount == null) {
+            Log.i(TAG, "handleSetAccountCreds() no account yet -> will try to create account");
+
+            try {
+                mAccount  = doAccountCreate(accountConfiguration);
+                Log.i(TAG, "handleSetAccountCreds() successfully created an account");
+                mEmitter.fireAccountCreated(intent, mAccount);
+            } catch (Exception e) {
+                Log.e(TAG, "handleSetAccountCreds() failed to create an account", e);
+                mEmitter.fireIntentHandled(intent, e);
+            }
+            return;
+        }
+
+        Log.d(TAG, "handleSetAccountCreds() account exists -> will check if account needs to be update");
+
+        boolean shouldUpdateAccount = mAccount.shouldUpdateConfiguration(accountConfiguration);
+        if (!shouldUpdateAccount) {
+            Log.d(TAG, "handleSetAccountCreds() config didn't change -> won't proceed with updates");
+            return;
+        }
+
+        boolean isWaitingForRegResult = mAccount.isRegInProgress();
+        boolean hasCall = !mCalls.isEmpty();
+
+        if (hasCall || isWaitingForRegResult) {
+            Log.d(TAG, "handleSetAccountCreds() can't update account yet -> there's a call or process of registered previous config is not finished yet");
+            mPendingAccountConfigurationIntent = intent;
+        } else {
+            // TODO: think about this
+//            if (self.udpTransportId == PJSUA_INVALID_ID || [self.account lastRegError] == PJSIP_SC_SERVICE_UNAVAILABLE) {
+//                logDebugMessage(PjSipEndpointLogTypeInfo, @"[setAccountCreds:]", @"upd is down or last reg error is 503 -> will restart udp");
+//            [self restartUDP];
+//            }
+//
+            Log.d(TAG, "handleSetAccountCreds() account exists -> will update account");
+//            mAccount.updateAccount(accountConfiguration);
+            try {
+                doAccountUpdate(accountConfiguration);
+                Log.i(TAG, "handleSetAccountCreds() successfully update account");
+            } catch (Exception e) {
+                Log.e(TAG, "handleSetAccountCreds() failed to update account: ", e);
+            }
         }
     }
 
@@ -551,6 +613,44 @@ public class PjSipService extends Service {
     }
 
     private PjSipAccount doAccountCreate(AccountConfigurationDTO configuration) throws Exception {
+        int transportId = transportIdForConfiguration(configuration);
+        AccountConfig cfg = accountConfigFromConfiguration(configuration, transportId);
+
+        PjSipAccount account = new PjSipAccount(this, transportId, configuration);
+        account.create(cfg);
+
+        return account;
+    }
+
+    private void doAccountUpdate(AccountConfigurationDTO configuration) throws Exception {
+        if (mAccount == null) {
+            Log.w(TAG, "doAccountUpdate() attempt to update account configuration but no account exists");
+            return;
+        }
+
+        int transportId = transportIdForConfiguration(configuration);
+        AccountConfig cfg = accountConfigFromConfiguration(configuration, transportId);
+
+        mAccount.modify(cfg);
+    }
+
+    private int transportIdForConfiguration(AccountConfigurationDTO configuration) {
+        if (configuration.isTransportNotEmpty()) {
+            switch (configuration.getTransport()) {
+                case "UDP":
+                    return mUdpTransportId;
+                case "TLS":
+                    return mTlsTransportId;
+                case "TCP":
+                default:
+                    return mTcpTransportId;
+            }
+        }
+
+        return mTcpTransportId;
+    }
+
+    private AccountConfig accountConfigFromConfiguration(AccountConfigurationDTO configuration, int transportId) {
         AccountConfig cfg = new AccountConfig();
 
         // General settings
@@ -603,21 +703,6 @@ public class PjSipService extends Service {
         }
 
         // Transport settings
-        int transportId = mTcpTransportId;
-
-        if (configuration.isTransportNotEmpty()) {
-            switch (configuration.getTransport()) {
-                case "UDP":
-                    transportId = mUdpTransportId;
-                    break;
-                case "TLS":
-                    transportId = mTlsTransportId;
-                    break;
-                default:
-                    Log.w(TAG, "Illegal \"" + configuration.getTransport() + "\" transport (possible values are UDP, TCP or TLS) use TCP instead");
-                    break;
-            }
-        }
 
         cfg.getSipConfig().setTransportId(transportId);
 
@@ -629,17 +714,10 @@ public class PjSipService extends Service {
 
         cfg.getMediaConfig().getTransportConfig().setQosType(pj_qos_type.PJ_QOS_TYPE_VOICE);
 
-        // -----
-
-        PjSipAccount account = new PjSipAccount(this, transportId, configuration);
-        account.create(cfg);
-
         mTrash.add(cfg);
         mTrash.add(cred);
 
-        mAccount = account;
-
-        return account;
+        return cfg;
     }
 
     private void handleAccountDelete(Intent intent) {
