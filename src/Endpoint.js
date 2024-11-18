@@ -203,7 +203,7 @@ export default class Endpoint extends EventEmitter {
     getCurrentAccount() {
       return new Promise((resolve, reject) => {
           NativeModules.PjSipModule.getCurrentAccount((successful, data) => {
-            if (successful) {
+            if (successful && data) {
               resolve(new Account(data));
             } else {
               reject(data);
