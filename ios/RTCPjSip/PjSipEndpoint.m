@@ -1331,7 +1331,6 @@ static void onLog(int level, const char *data, int len) {
     if (message && message.length > 0) {
         dispatch_async(dispatch_get_main_queue(), ^{
             [[PjSipEndpoint instance] emmitLogMessage:message forType:PjSipEndpointLogTypeInfo];
-            [PjSipUtil appendLogMessage:message];
         });
     }
 }
