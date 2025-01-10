@@ -93,7 +93,7 @@
     
     cfg.vid_in_auto_show = PJ_FALSE;
     cfg.vid_out_auto_transmit = PJ_FALSE;
-    cfg.ka_interval = 0;
+    cfg.ka_interval = 30;
     cfg.use_rfc5626 = PJ_TRUE;
     cfg.allow_sdp_nat_rewrite = PJ_TRUE;
     cfg.sip_stun_use = PJSUA_STUN_RETRY_ON_FAILURE;
