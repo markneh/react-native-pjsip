@@ -717,8 +717,11 @@ public class PjSipService extends Service {
 
     private void handleCallMake(Intent intent) {
         try {
-            int accountId = intent.getIntExtra("account_id", -1);
-            PjSipAccount account = findAccount(accountId);
+            if (mAccount == null) {
+                Log.w(TAG, "Attempt to perform a call without an account");
+                throw new Exception("Attempt to perform a call without an account");
+            }
+
             String destination = intent.getStringExtra("destination");
             String settingsJson = intent.getStringExtra("settings");
             String messageJson = intent.getStringExtra("message");
@@ -768,7 +771,7 @@ public class PjSipService extends Service {
                 mTrash.add(callTxOption);
             }
 
-            PjSipCall call = new PjSipCall(account);
+            PjSipCall call = new PjSipCall(mAccount);
             Log.d(TAG, "will make call");
             call.makeCall(destination, callOpParam);
 

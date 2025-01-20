@@ -117,11 +117,10 @@ public class PjActions {
        return intent;
     }
 
-    public static Intent createMakeCallIntent(int callbackId, int accountId, String destination, ReadableMap settings, ReadableMap message, Context context) {
+    public static Intent createMakeCallIntent(int callbackId, String destination, ReadableMap settings, ReadableMap message, Context context) {
         Intent intent = new Intent(context, PjSipService.class);
         intent.setAction(PjActions.ACTION_MAKE_CALL);
         intent.putExtra("callback_id", callbackId);
-        intent.putExtra("account_id", accountId);
         intent.putExtra("destination", destination);
 
         if (settings != null) {
