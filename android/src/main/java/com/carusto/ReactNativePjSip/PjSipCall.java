@@ -30,12 +30,16 @@ public class PjSipCall extends Call {
         this.account = acc;
     }
 
-    public PjSipService getService() {
-        return account.getService();
+    public PjSipEndpointController getEpController() {
+        return account.getEPController();
     }
 
     public void setxCallId(String xCallId) {
         this.xCallId = xCallId;
+    }
+
+    public String getxCallId() {
+        return xCallId;
     }
 
     public void hold() throws Exception {
@@ -46,7 +50,7 @@ public class PjSipCall extends Call {
         isHeld = true;
 
         // Emmit changes
-        getService().emmitCallUpdated(this);
+        getEpController().emmitCallUpdated(this);
 
         // Send reinvite to server for hold
         setHold(new CallOpParam(true));
@@ -60,7 +64,7 @@ public class PjSipCall extends Call {
         isHeld = false;
 
         // Emmit changes
-        getService().emmitCallUpdated(this);
+        getEpController().emmitCallUpdated(this);
 
         // Send reinvite to server for release from hold
         CallOpParam prm = new CallOpParam(true);
@@ -78,7 +82,7 @@ public class PjSipCall extends Call {
         doMute(true);
 
         // Emmit changes
-        getService().emmitCallUpdated(this);
+        getEpController().emmitCallUpdated(this);
     }
 
     public void unmute() throws Exception {
@@ -90,7 +94,7 @@ public class PjSipCall extends Call {
         doMute(false);
 
         // Emmit changes
-        getService().emmitCallUpdated(this);
+        getEpController().emmitCallUpdated(this);
     }
 
     private void doMute(boolean mute) throws Exception {
@@ -112,7 +116,7 @@ public class PjSipCall extends Call {
 
                 // connect or disconnect the captured audio
                 try {
-                    AudDevManager mgr = account.getService().getAudDevManager();
+                    AudDevManager mgr = account.getEPController().getAudDevManager();
 
                     if (mute) {
                         mgr.getCaptureDevMedia().stopTransmit(audioMedia);
@@ -149,7 +153,7 @@ public class PjSipCall extends Call {
     public void onCallState(OnCallStateParam prm) {
         super.onCallState(prm);
 
-        getService().emmitCallStateChanged(this, prm);
+        getEpController().emmitCallStateChanged(this, prm);
     }
 
     public JSONObject toJson() {
@@ -159,7 +163,7 @@ public class PjSipCall extends Call {
             CallInfo info = getInfo();
 
             // -----
-            AudioManager audioManager = (AudioManager) getService().getBaseContext().getSystemService(Context.AUDIO_SERVICE);
+            AudioManager audioManager = (AudioManager) getEpController().getContext().getSystemService(Context.AUDIO_SERVICE);
             boolean speaker = audioManager.isSpeakerphoneOn();
 
             // -----
@@ -236,7 +240,7 @@ public class PjSipCall extends Call {
 
                 // connect the call audio media to sound device
                 try {
-                    AudDevManager mgr = account.getService().getAudDevManager();
+                    AudDevManager mgr = account.getEPController().getAudDevManager();
 
                     try {
                         audioMedia.adjustRxLevel((float) 1.5);
@@ -254,7 +258,7 @@ public class PjSipCall extends Call {
         }
 
         // Emmit changes
-        getService().emmitCallUpdated(this);
+        getEpController().emmitCallUpdated(this);
     }
 
     private JSONArray mediaInfoToJson(CallMediaInfoVector media) {

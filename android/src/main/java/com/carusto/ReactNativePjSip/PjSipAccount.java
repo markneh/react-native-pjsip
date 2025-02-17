@@ -23,20 +23,20 @@ public class PjSipAccount extends Account {
 
     private OnRegStateParam lastRegStateParam;
 
-    private PjSipService service;
+    private PjSipEndpointController epController;
 
     private AccountConfigurationDTO configuration;
 
     private Integer transportId;
 
-    public PjSipAccount(PjSipService service, int transportId, AccountConfigurationDTO configuration) {
-        this.service = service;
+    public PjSipAccount(PjSipEndpointController epController, int transportId, AccountConfigurationDTO configuration) {
+        this.epController = epController;
         this.transportId = transportId;
         this.configuration = configuration;
     }
 
-    public PjSipService getService() {
-        return service;
+    public PjSipEndpointController getEPController() {
+        return epController;
     }
 
     public int getTransportId() {
@@ -81,7 +81,7 @@ public class PjSipAccount extends Account {
     public void onRegState(OnRegStateParam prm) {
         reason = prm.getReason();
         lastRegStateParam = prm;
-        service.emmitRegistrationChanged(this, prm);
+        epController.emmitRegistrationChanged(this, prm);
     }
 
     @Override
@@ -89,7 +89,7 @@ public class PjSipAccount extends Account {
         PjSipCall call = new PjSipCall(this, prm.getCallId());
         String xCallId = extractXCallId(prm);
         call.setxCallId(xCallId);
-        service.emmitCallReceived(this, call);
+        epController.emmitCallReceived(this, call);
     }
 
     private String extractXCallId(OnIncomingCallParam prm) {
@@ -113,7 +113,7 @@ public class PjSipAccount extends Account {
     @Override
     public void onInstantMessage(OnInstantMessageParam prm) {
         PjSipMessage message = new PjSipMessage(this, prm);
-        service.emmitMessageReceived(this, message);
+        epController.emmitMessageReceived(this, message);
     }
 
     public JSONObject toJson() {
